@@ -12,6 +12,8 @@ export interface SourceJob {
   salaryText: string | null;
   tags: string[];
   postedAt: string | null;
+  /** Set by boards that only carry entry-level openings. */
+  earlyCareer?: boolean;
 }
 
 export interface JobSource {

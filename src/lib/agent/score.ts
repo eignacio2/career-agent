@@ -218,7 +218,7 @@ function levelFit(job: Job, profile: Profile): LevelFit {
   let note: string;
   let cap: number | null = null;
 
-  if (assessment?.earlyCareer || JUNIOR_SIGNALS.some((signal) => title.includes(signal))) {
+  if (job.earlyCareer || assessment?.earlyCareer || JUNIOR_SIGNALS.some((signal) => title.includes(signal))) {
     points = isEarlyCareerCandidate ? MAX_LEVEL_POINTS : 3;
     note = isEarlyCareerCandidate
       ? "Explicitly an early-career or new-grad opening, which is exactly the right level."
@@ -257,6 +257,24 @@ function levelFit(job: Job, profile: Profile): LevelFit {
     gap: null,
     cap,
   };
+}
+
+const NON_US_MARKERS =
+  /\b(united kingdom|england|scotland|london|manchester|edinburgh|germany|berlin|munich|stuttgart|hamburg|france|paris|spain|madrid|barcelona|netherlands|amsterdam|ireland|dublin|poland|warsaw|krakow|india|bangalore|bengaluru|hyderabad|mumbai|pune|singapore|australia|sydney|melbourne|canada|toronto|vancouver|montreal|japan|tokyo|brazil|s[aã]o paulo|mexico city|israel|tel aviv|switzerland|zurich|geneva|sweden|stockholm|denmark|copenhagen|italy|milan|rome|portugal|lisbon|porto|romania|bucharest|czech|prague|austria|vienna|belgium|brussels|norway|oslo|finland|helsinki|china|beijing|shanghai|shenzhen|korea|seoul|hong kong|taiwan|taipei|dubai|abu dhabi|u\.?a\.?e\.?|south africa|new zealand|auckland|argentina|chile|colombia|bogot[aá]|philippines|manila|vietnam|hanoi|thailand|bangkok|indonesia|jakarta|malaysia|kuala lumpur|turkey|istanbul|egypt|cairo|nigeria|lagos|kenya|nairobi)\b/i;
+
+/**
+ * True when the candidate is targeting one country and the posting sits in
+ * another. Relocating within a country is a normal ask for a first job; needing
+ * a work visa is a different category of obstacle and usually disqualifying.
+ */
+function requiresForeignAuthorization(job: Job, profile: Profile): string | null {
+  if (job.remote) return null;
+
+  const targetsAbroad = profile.targetLocations.some((location) => NON_US_MARKERS.test(location));
+  if (targetsAbroad) return null;
+
+  const match = job.location.match(NON_US_MARKERS);
+  return match ? match[0] : null;
 }
 
 function locationFit(job: Job, profile: Profile): { points: number; note: string } {
@@ -370,7 +388,11 @@ export function scoreHeuristically(job: Job, profile: Profile, resume: Resume): 
 
   const raw =
     title.points + skills.points + level.points + location.points + salary.points + familyAdjustment;
-  const score = Math.max(0, Math.min(level.cap ?? 100, Math.min(100, raw)));
+
+  const foreign = requiresForeignAuthorization(job, profile);
+  const caps = [level.cap, foreign ? 50 : null].filter((value): value is number => value !== null);
+  const ceiling = caps.length > 0 ? Math.min(...caps) : 100;
+  const score = Math.max(0, Math.min(ceiling, Math.min(100, raw)));
 
   const reasons = [level.note, title.note, location.note];
   if (skills.matched.length > 0) {
@@ -381,6 +403,11 @@ export function scoreHeuristically(job: Job, profile: Profile, resume: Resume): 
   if (salary.note) reasons.push(salary.note);
 
   const gaps = [...(level.gap ? [level.gap] : []), ...skills.missing.slice(0, 7)];
+  if (foreign) {
+    const label = foreign.charAt(0).toUpperCase() + foreign.slice(1);
+    gaps.unshift(`Based in ${label}, so it would need work authorization you may not hold.`);
+    reasons.push(`This role is on-site in ${job.location}, outside the countries you are targeting.`);
+  }
   if (job.roleFamily === "adjacent") {
     gaps.push("Reads as adjacent work rather than a data science or AI engineering role.");
   }

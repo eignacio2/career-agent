@@ -112,6 +112,7 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
         salaryText: candidate.salaryText,
         tags: candidate.tags,
         roleFamily: classifyRole(candidate),
+        earlyCareer: candidate.earlyCareer ?? false,
         postedAt: candidate.postedAt,
         runId: run.id,
       });

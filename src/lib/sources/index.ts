@@ -1,12 +1,13 @@
 import type { JobRole } from "../types";
 import { arbeitnowSource } from "./arbeitnow";
+import { newGradSource } from "./newgrad";
 import { offlineSource } from "./offline";
 import { remotiveSource } from "./remotive";
 import type { JobSource, SourceJob } from "./types";
 
 export type { SourceJob } from "./types";
 
-export const LIVE_SOURCES: JobSource[] = [remotiveSource, arbeitnowSource];
+export const LIVE_SOURCES: JobSource[] = [newGradSource, remotiveSource, arbeitnowSource];
 export const FALLBACK_SOURCE: JobSource = offlineSource;
 
 export interface DiscoveryResult {

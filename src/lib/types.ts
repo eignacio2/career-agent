@@ -112,6 +112,8 @@ export interface Job {
   salaryText: string | null;
   tags: string[];
   roleFamily: JobRole;
+  /** Came from a board that only lists entry-level openings. */
+  earlyCareer: boolean;
   postedAt: string | null;
   discoveredAt: string;
   score: number | null;

@@ -123,6 +123,7 @@ function mapJob(row: JobRow): Job {
     salaryText: (row.salary_text as string | null) ?? null,
     tags: parseJson<string[]>(row.tags, []),
     roleFamily: row.role_family as Job["roleFamily"],
+    earlyCareer: Boolean(row.early_career),
     postedAt: (row.posted_at as string | null) ?? null,
     discoveredAt: row.discovered_at as string,
     score: row.score === null || row.score === undefined ? null : Number(row.score),
@@ -151,9 +152,9 @@ export function insertJobIfNew(job: NewJob): Job | null {
   const info = db
     .prepare(
       `INSERT INTO jobs (source, source_id, title, company, location, remote, url, apply_email,
-        description, salary_text, tags, role_family, posted_at, discovered_at, status, run_id)
+        description, salary_text, tags, role_family, early_career, posted_at, discovered_at, status, run_id)
        VALUES (@source, @sourceId, @title, @company, @location, @remote, @url, @applyEmail,
-        @description, @salaryText, @tags, @roleFamily, @postedAt, @discoveredAt, 'new', @runId)`,
+        @description, @salaryText, @tags, @roleFamily, @earlyCareer, @postedAt, @discoveredAt, 'new', @runId)`,
     )
     .run({
       source: job.source,
@@ -168,6 +169,7 @@ export function insertJobIfNew(job: NewJob): Job | null {
       salaryText: job.salaryText,
       tags: JSON.stringify(job.tags),
       roleFamily: job.roleFamily,
+      earlyCareer: job.earlyCareer ? 1 : 0,
       postedAt: job.postedAt,
       discoveredAt: now(),
       runId: job.runId,

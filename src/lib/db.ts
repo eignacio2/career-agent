@@ -55,6 +55,7 @@ function migrate(db: Database.Database) {
       salary_text TEXT,
       tags TEXT NOT NULL DEFAULT '[]',
       role_family TEXT NOT NULL DEFAULT 'adjacent',
+      early_career INTEGER NOT NULL DEFAULT 0,
       posted_at TEXT,
       discovered_at TEXT NOT NULL,
       score REAL,
@@ -127,6 +128,7 @@ function migrate(db: Database.Database) {
   // CREATE TABLE IF NOT EXISTS leaves existing tables untouched, so columns added
   // after a database was first created have to be applied separately.
   addColumnIfMissing(db, "linkedin_packs", "changes", "TEXT NOT NULL DEFAULT '[]'");
+  addColumnIfMissing(db, "jobs", "early_career", "INTEGER NOT NULL DEFAULT 0");
 }
 
 function addColumnIfMissing(
