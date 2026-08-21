@@ -67,74 +67,71 @@ function dedupe(jobs: SourceJob[]): SourceJob[] {
   return unique;
 }
 
-const AI_ENGINEERING_SIGNALS = [
-  "ai engineer",
-  "llm",
-  "large language model",
-  "genai",
-  "generative ai",
-  "rag",
-  "retrieval augmented",
-  "agent",
-  "prompt",
-  "nlp engineer",
-  "machine learning engineer",
-  "mlops",
-  "ml platform",
-  "inference",
-  "fine-tun",
+/**
+ * Classification runs on the job title only. Body text is far too noisy: a
+ * customer-support posting says "agent" and "prompt", and a Rails posting
+ * mentions "inference" in passing, so matching on the description alone drags in
+ * roles that have nothing to do with this search.
+ */
+const AI_ENGINEERING_TITLES = [
+  /\ba\.?i\.?\s*[/&-]?\s*(engineer|developer|architect|scientist)\b/,
+  /\b(ml|machine[\s-]learning)\s*[/&-]?\s*(engineer|scientist|architect|researcher)\b/,
+  /\bllm\s*[/&-]?\s*(engineer|developer|scientist|architect)\b/,
+  /\b(gen\s?ai|generative\s+ai)\b/,
+  /\bmlops\b/,
+  /\bml\s+(platform|infrastructure|ops)\b/,
+  /\bnlp\s+(engineer|scientist)\b/,
+  /\bcomputer\s+vision\s+(engineer|scientist)\b/,
+  /\bdeep\s+learning\b/,
+  /\bprompt\s+engineer\b/,
+  /\bresearch\s+engineer\b/,
+  /\b(software|backend|platform)\s+engineer\b.*\b(ml|ai|machine\s+learning|inference|model)\b/,
 ];
 
-const DATA_SCIENCE_SIGNALS = [
-  "data scientist",
-  "applied scientist",
-  "research scientist",
-  "decision scientist",
-  "quantitative",
-  "statistician",
-  "forecasting",
-  "experimentation",
-  "causal",
-  "econometric",
+const DATA_SCIENCE_TITLES = [
+  /\bdata\s+scien(ce|tist)\b/,
+  /\b(applied|research|decision|staff|principal|lead|senior)\s+scientist\b/,
+  /\bstatistician\b/,
+  /\b(quantitative|quant)\s+(analyst|researcher|developer|scientist)\b/,
+  /\beconometric/,
+  /\bexperimentation\s+(scientist|analyst)\b/,
 ];
 
-export function classifyRole(job: Pick<SourceJob, "title" | "tags" | "description">): JobRole {
-  const title = job.title.toLowerCase();
-  const haystack = `${title} ${job.tags.join(" ")} ${job.description.slice(0, 1200)}`.toLowerCase();
+const ADJACENT_TITLES = [
+  /\bdata\s+engineer\b/,
+  /\banalytics\s+engineer\b/,
+  /\bdata\s+analyst\b/,
+  /\bdata\s+architect\b/,
+  /\bbusiness\s+intelligence\b/,
+  /\banalytics\s+(lead|manager)\b/,
+];
 
-  const titleIsAi = AI_ENGINEERING_SIGNALS.some((signal) => title.includes(signal));
-  const titleIsDs = DATA_SCIENCE_SIGNALS.some((signal) => title.includes(signal));
-  if (titleIsAi) return "ai-engineering";
-  if (titleIsDs) return "data-science";
+/** Never worth a scoring pass regardless of what the rest of the title says. */
+const HARD_REJECT_TITLES = [
+  /\b(sales|account\s+executive|business\s+development|recruit(er|ing)|customer\s+(success|support)|support\s+(specialist|engineer|agent)|office\s+(assistant|manager)|executive\s+assistant)\b/,
+  /\b(designer|copywriter|content\s+writer|social\s+media|marketing\s+(manager|specialist))\b/,
+  /\b(teacher|tutor|nurse|driver|warehouse|technician|labeling|annotator|annotation)\b/,
+  /\b(intern|internship)\b/,
+];
 
-  const bodyIsAi = AI_ENGINEERING_SIGNALS.some((signal) => haystack.includes(signal));
-  const bodyIsDs = DATA_SCIENCE_SIGNALS.some((signal) => haystack.includes(signal));
-  if (bodyIsAi) return "ai-engineering";
-  if (bodyIsDs) return "data-science";
-  return "adjacent";
+function matchTitle(title: string): JobRole | null {
+  const normalized = title.toLowerCase();
+  if (HARD_REJECT_TITLES.some((pattern) => pattern.test(normalized))) return null;
+  if (AI_ENGINEERING_TITLES.some((pattern) => pattern.test(normalized))) return "ai-engineering";
+  if (DATA_SCIENCE_TITLES.some((pattern) => pattern.test(normalized))) return "data-science";
+  if (ADJACENT_TITLES.some((pattern) => pattern.test(normalized))) return "adjacent";
+  return null;
 }
 
-const OFF_TARGET_TITLES = [
-  "sales",
-  "account executive",
-  "recruiter",
-  "customer success",
-  "designer",
-  "copywriter",
-  "teacher",
-  "nurse",
-  "driver",
-  "warehouse",
-];
+export function classifyRole(job: Pick<SourceJob, "title" | "tags" | "description">): JobRole {
+  return matchTitle(job.title) ?? "adjacent";
+}
 
-/** Cheap pre-filter so the scorer never spends a model call on obviously wrong roles. */
+/**
+ * Pre-filter run before scoring. Boards return loose keyword matches, so an
+ * allowlist on the title is the only reliable way to keep the pipeline focused
+ * on data science and AI engineering work.
+ */
 export function isPlausibleTarget(job: SourceJob): boolean {
-  const title = job.title.toLowerCase();
-  if (OFF_TARGET_TITLES.some((needle) => title.includes(needle))) return false;
-
-  const role = classifyRole(job);
-  if (role !== "adjacent") return true;
-
-  const technical = ["python", "sql", "machine learning", "analytics", "data", "model"];
-  return technical.some((needle) => `${title} ${job.tags.join(" ")}`.includes(needle));
+  return matchTitle(job.title) !== null;
 }

@@ -61,7 +61,9 @@ export function saveProfile(patch: Partial<Profile>): Profile {
   const current = getProfile();
   const merged = { ...current, ...patch };
   const timestamp = now();
-  const { id: _id, updatedAt: _updatedAt, ...data } = merged;
+  const data: Record<string, unknown> = { ...merged };
+  delete data.id;
+  delete data.updatedAt;
 
   db.prepare(
     `INSERT INTO profile (id, data, updated_at) VALUES (1, ?, ?)

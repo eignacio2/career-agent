@@ -24,14 +24,31 @@ const SENIOR_SIGNALS = ["senior", "staff", "principal", "lead", "sr.", "sr ", "i
 const JUNIOR_SIGNALS = ["junior", "entry level", "entry-level", "intern", "graduate", "associate", "jr."];
 const MANAGER_SIGNALS = ["manager", "director", "head of", "vp ", "vice president"];
 
-export function extractJobSkills(job: Pick<Job, "title" | "description" | "tags">): string[] {
+/**
+ * Finds the technologies a posting names. `extraVocabulary` lets the caller add
+ * the candidate's own listed skills, so credit is given for anything they claim
+ * even when it is absent from the built-in vocabulary.
+ */
+export function extractJobSkills(
+  job: Pick<Job, "title" | "description" | "tags">,
+  extraVocabulary: string[] = [],
+): string[] {
   const haystack = `${job.title} ${job.tags.join(" ")} ${job.description}`.toLowerCase();
-  return SKILL_VOCABULARY.filter((skill) => haystack.includes(skill));
+  const vocabulary = new Set([
+    ...SKILL_VOCABULARY,
+    ...extraVocabulary.map((skill) => skill.toLowerCase().trim()).filter((skill) => skill.length > 2),
+  ]);
+  return [...vocabulary].filter((skill) => haystack.includes(skill));
 }
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9+#. ]/g, " ").replace(/\s+/g, " ").trim();
 }
+
+/** Words that describe level rather than role; scored separately by seniorityFit. */
+const LEVEL_WORDS = new Set([
+  "senior","staff","principal","lead","junior","associate","entry","sr","jr","ii","iii","iv","level","independent",
+]);
 
 function titleAlignment(job: Job, profile: Profile): { points: number; note: string } {
   const title = normalize(job.title);
@@ -39,24 +56,29 @@ function titleAlignment(job: Job, profile: Profile): { points: number; note: str
     const normalized = normalize(target);
     if (!normalized) continue;
     if (title === normalized) {
-      return { points: 30, note: `Title is an exact match for a target role (${target}).` };
+      return { points: 34, note: `Title is an exact match for a target role (${target}).` };
     }
     if (title.includes(normalized)) {
-      return { points: 26, note: `Title contains your target role "${target}".` };
+      return { points: 30, note: `Title contains your target role "${target}".` };
     }
   }
 
   const targetWords = new Set(
-    profile.targetTitles.flatMap((target) => normalize(target).split(" ")).filter((w) => w.length > 2),
+    profile.targetTitles
+      .flatMap((target) => normalize(target).split(" "))
+      .filter((word) => word.length > 2 && !LEVEL_WORDS.has(word)),
   );
-  const overlap = title.split(" ").filter((word) => targetWords.has(word));
+  const overlap = [...new Set(title.split(" "))].filter(
+    (word) => targetWords.has(word) && !LEVEL_WORDS.has(word),
+  );
+
   if (overlap.length >= 2) {
-    return { points: 18, note: `Title partially overlaps your targets (${overlap.join(", ")}).` };
+    return { points: 14, note: `Title only partially overlaps your targets (${overlap.join(", ")}).` };
   }
   if (overlap.length === 1) {
-    return { points: 10, note: `Loose title overlap on "${overlap[0]}".` };
+    return { points: 6, note: `Loose title overlap on "${overlap[0]}" alone.` };
   }
-  return { points: 2, note: "Title does not line up with your target roles." };
+  return { points: 0, note: "Title does not line up with any of your target roles." };
 }
 
 function skillCoverage(
@@ -72,15 +94,25 @@ function skillCoverage(
     ].map(normalize),
   );
 
-  const required = extractJobSkills(job);
-  if (required.length === 0) {
-    return { points: 14, matched: [], missing: [] };
-  }
-
+  const required = extractJobSkills(job, [...owned]);
   const matched = required.filter((skill) => owned.has(normalize(skill)));
   const missing = required.filter((skill) => !owned.has(normalize(skill)));
+
+  // Some postings describe the work without naming a stack. There is nothing to
+  // measure there, so score it neutrally rather than punishing the candidate for
+  // the posting's vagueness.
+  if (required.length < 4) {
+    return { points: 13, matched, missing };
+  }
+
+  // A long posting can name twenty technologies and no real candidate covers all
+  // of them, so a raw ratio would cap every score in the sixties. Treat 60%
+  // coverage as full marks, and credit a high absolute count on its own.
   const ratio = matched.length / required.length;
-  return { points: Math.round(ratio * 30), matched, missing };
+  const fromRatio = Math.min(1, ratio / 0.6) * 28;
+  const fromCount = Math.min(1, matched.length / 8) * 24;
+
+  return { points: Math.round(Math.max(fromRatio, fromCount)), matched, missing };
 }
 
 function seniorityFit(job: Job, profile: Profile): { points: number; note: string } {
@@ -104,40 +136,51 @@ function seniorityFit(job: Job, profile: Profile): { points: number; note: strin
 }
 
 function locationFit(job: Job, profile: Profile): { points: number; note: string } {
-  const location = job.location.toLowerCase();
+  const location = job.location.toLowerCase().trim();
   const wantsRemote = profile.remotePreference === "remote";
 
   if (job.remote || location.includes("remote") || location.includes("anywhere")) {
     if (wantsRemote || profile.remotePreference === "any") {
-      return { points: 15, note: "Remote role, which matches your stated preference." };
+      return { points: 16, note: "Remote role, which matches your stated preference." };
     }
-    return { points: 11, note: "Remote role." };
+    return { points: 12, note: "Remote role." };
+  }
+
+  // An empty location field means the board did not say, not that the role is
+  // on-site. Guessing either way would be wrong, so stay neutral and say so.
+  if (location.length === 0) {
+    return { points: 9, note: "The posting does not state a location, so this needs checking by hand." };
   }
 
   const matchedCity = profile.targetLocations.find((target) => {
-    const city = normalize(target).split(",")[0];
-    return city.length > 2 && location.includes(city);
+    const city = normalize(target).split(",")[0].replace(/\(.*\)/, "").trim();
+    return city.length > 2 && city !== "remote" && location.includes(city);
   });
   if (matchedCity) {
-    return { points: 12, note: `Located in a target market (${matchedCity}).` };
+    return { points: 13, note: `Located in a target market (${matchedCity}).` };
   }
   if (wantsRemote) {
-    return { points: 2, note: `On-site in ${job.location}, but you prefer remote.` };
+    return { points: 2, note: `On-site in ${job.location}, but you are looking for remote work.` };
   }
-  return { points: 6, note: `On-site in ${job.location}.` };
+  return { points: 7, note: `On-site in ${job.location}.` };
 }
 
 function salaryFit(job: Job, profile: Profile): { points: number; note: string | null } {
-  if (!profile.minSalary || !job.salaryText) return { points: 5, note: null };
+  if (!profile.minSalary || !job.salaryText) return { points: 4, note: null };
+
+  // Hourly contract rates are not comparable to an annual floor, so skip them.
+  if (/\/\s*(hour|hr)\b|per hour/i.test(job.salaryText)) {
+    return { points: 4, note: `Posted as an hourly rate (${job.salaryText}), not compared against your annual floor.` };
+  }
 
   const numbers = [...job.salaryText.matchAll(/(\d[\d,]{3,})/g)]
     .map((match) => Number(match[1].replace(/,/g, "")))
     .filter((value) => value >= 20_000 && value <= 1_500_000);
-  if (numbers.length === 0) return { points: 5, note: null };
+  if (numbers.length === 0) return { points: 4, note: null };
 
   const top = Math.max(...numbers);
   if (top >= profile.minSalary) {
-    return { points: 8, note: `Posted range tops out at $${top.toLocaleString()}, above your floor.` };
+    return { points: 6, note: `Posted range tops out at $${top.toLocaleString()}, above your floor.` };
   }
   return {
     points: 0,
@@ -197,11 +240,16 @@ export function scoreHeuristically(job: Job, profile: Profile, resume: Resume): 
   const seniority = seniorityFit(job, profile);
   const location = locationFit(job, profile);
   const salary = salaryFit(job, profile);
-  const familyBonus = job.roleFamily === "adjacent" ? 0 : 5;
+  // The search is specifically for data science and AI engineering work, so an
+  // adjacent role has to be strong everywhere else to compete.
+  const familyAdjustment = job.roleFamily === "adjacent" ? -8 : 6;
 
   const score = Math.max(
     0,
-    Math.min(100, title.points + skills.points + seniority.points + location.points + salary.points + familyBonus),
+    Math.min(
+      100,
+      title.points + skills.points + seniority.points + location.points + salary.points + familyAdjustment,
+    ),
   );
 
   const reasons = [title.note, seniority.note, location.note];
@@ -214,7 +262,7 @@ export function scoreHeuristically(job: Job, profile: Profile, resume: Resume): 
 
   const gaps = skills.missing.slice(0, 8);
   if (job.roleFamily === "adjacent") {
-    gaps.push("Posting does not clearly read as data science or AI engineering.");
+    gaps.push("Reads as adjacent work rather than a data science or AI engineering role.");
   }
 
   return { score, verdict: verdictFor(score), reasons, gaps };

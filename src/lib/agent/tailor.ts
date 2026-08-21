@@ -49,7 +49,7 @@ function matchedSkills(resume: Resume, profile: Profile, job: Job): string[] {
       ...resume.experience.flatMap((role) => role.stack),
     ].map((skill) => skill.toLowerCase()),
   );
-  return extractJobSkills(job).filter((skill) => owned.has(skill.toLowerCase()));
+  return extractJobSkills(job, [...owned]).filter((skill) => owned.has(skill.toLowerCase()));
 }
 
 function heuristicSummary(job: Job, profile: Profile, overlap: string[]): string {
@@ -71,25 +71,37 @@ function heuristicCoverLetter(
   const recent = resume.experience[0];
   const bestBullets = Object.values(bullets).flat().slice(0, 3);
   const skillLine = overlap.slice(0, 4).join(", ");
+  const selfDescription = profile.headline.split(/[—|·]/)[0].trim() || "data scientist and AI engineer";
 
   const paragraphs = [
     `Dear ${job.company} hiring team,`,
-    `I am applying for the ${job.title} role. I am a ${profile.headline.split("—")[0].trim().toLowerCase() || "data scientist"} with ${profile.yearsExperience} years of production experience, and the parts of this posting I keep re-reading are the ones about ${skillLine || "owning models in production rather than in notebooks"}.`,
-    recent
-      ? `Most recently, as ${recent.role} at ${recent.company}, ${bestBullets[0] ? lowerFirst(bestBullets[0]) : "I owned models end to end from framing through deployment and monitoring."}`
-      : `I have owned models end to end from problem framing through deployment and monitoring.`,
+
+    `I am applying for the ${job.title} role. My background is ${selfDescription}, with ${profile.yearsExperience} years of production experience, and the part of this posting that stands out to me is ${skillLine ? `the emphasis on ${skillLine}` : "the emphasis on owning systems in production rather than prototypes in notebooks"}.`,
+
+    recent && bestBullets[0]
+      ? `As ${recent.role} at ${recent.company}, I ${asClause(bestBullets[0])}`
+      : "I have owned models end to end, from problem framing through deployment, monitoring, and the eventual decision to retire them.",
+
     bestBullets.length > 1
-      ? `Two other things from my recent work that map onto this role: ${lowerFirst(bestBullets[1])}${bestBullets[2] ? ` I also ${lowerFirst(bestBullets[2])}` : ""}`
+      ? `Two other pieces of that work map onto this role. I ${asClause(bestBullets[1])}${bestBullets[2] ? ` And I ${asClause(bestBullets[2])}` : ""}`
       : "",
-    `I would welcome the chance to talk through how this work applies to what your team is building. My resume is attached, and my code is at ${profile.githubUrl || "my GitHub profile"}.`,
+
+    `I would welcome the chance to talk through how this applies to what your team is building. My resume is below${profile.githubUrl ? `, and my code is at ${profile.githubUrl}` : ""}.`,
+
     `Thank you for your time,\n${profile.fullName}\n${profile.email}${profile.phone ? ` · ${profile.phone}` : ""}`,
   ];
 
   return paragraphs.filter(Boolean).join("\n\n");
 }
 
-function lowerFirst(sentence: string): string {
-  return sentence.charAt(0).toLowerCase() + sentence.slice(1);
+/**
+ * Resume bullets start with a past-tense verb ("Built a pipeline…"), which reads
+ * correctly after an explicit "I" once the leading capital is dropped.
+ */
+function asClause(bullet: string): string {
+  const trimmed = bullet.trim();
+  const body = trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
+  return body.endsWith(".") ? body : `${body}.`;
 }
 
 interface LlmTailoring {
