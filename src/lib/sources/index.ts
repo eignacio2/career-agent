@@ -25,6 +25,16 @@ export async function discover(queries: string[], limitPerSource = 25): Promise<
   const sourcesUsed: string[] = [];
   const sourcesFailed: string[] = [];
 
+  // Set CAREER_AGENT_OFFLINE=1 to work against the bundled sample board only.
+  if (process.env.CAREER_AGENT_OFFLINE === "1") {
+    return {
+      jobs: dedupe(await FALLBACK_SOURCE.fetch(queries, 25)),
+      sourcesUsed: [FALLBACK_SOURCE.label],
+      sourcesFailed: [],
+      usedFallback: true,
+    };
+  }
+
   const settled = await Promise.allSettled(
     LIVE_SOURCES.map(async (source) => ({
       source,
