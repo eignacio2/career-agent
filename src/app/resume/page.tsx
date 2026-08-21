@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/app-shell";
 import { ResumeEditor } from "@/components/resume-editor";
+import { ResumeImport } from "@/components/resume-import";
 import { getResume } from "@/lib/repo";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export default function ResumePage() {
       <PageHeader
         title="Master resume"
         description="This is the source of truth the agent tailors from. It never edits this copy — each application gets its own version with bullets reordered and trimmed for that posting."
+        actions={<ResumeImport />}
       />
       <div className="px-5 py-6 sm:px-8">
         <ResumeEditor initial={resume} />
