@@ -8,8 +8,6 @@ emails you a digest of everything it did.
 It runs entirely on your machine against a local SQLite file. Nothing leaves your computer except
 the job board queries, the model calls you configure, and the mail you tell it to send.
 
-![Dashboard](docs/dashboard.png)
-
 ## What it actually does
 
 Each run is a single pipeline:
