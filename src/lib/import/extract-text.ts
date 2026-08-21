@@ -43,15 +43,34 @@ function detectFormat(filename: string, mimeType: string): SupportedFormat {
   );
 }
 
+const MONTH_NAMES =
+  "January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec";
+
+/** Labels that commonly end up glued to the preceding word by PDF extractors. */
+const GLUED_LABELS = `GPA|Expected|Graduation|Present|Current|${MONTH_NAMES}`;
+
+/**
+ * Two-column resume layouts frequently extract as a single run of text, so
+ * "Computer ScienceExpected Graduation" and "Chicago, ILGPA: 3.20" appear glued.
+ * Only known label words are separated, since blindly splitting on a case change
+ * would wreck legitimate names like JavaFX, DynamoDB, and CloudFormation.
+ */
+function deglue(text: string): string {
+  return text
+    .replace(new RegExp(`([A-Za-z,.)])(${GLUED_LABELS})\\b`, "g"), "$1 $2")
+    .replace(/([A-Za-z,)])((?:19|20)\d{2})\b/g, "$1 $2");
+}
+
 function tidy(raw: string): string {
-  return raw
-    .replace(/\r\n?/g, "\n")
-    .replace(/\u00a0/g, " ")
-    // Collapse the letter-spaced text some PDF exporters produce.
-    .replace(/[ \t]{2,}/g, " ")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return deglue(
+    raw
+      .replace(/\r\n?/g, "\n")
+      .replace(/\u00a0/g, " ")
+      // Collapse the letter-spaced text some PDF exporters produce.
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n"),
+  ).trim();
 }
 
 async function extractPdf(bytes: Uint8Array): Promise<ExtractedDocument> {

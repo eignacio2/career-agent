@@ -1,6 +1,6 @@
 import { badRequest, ok, readJson, serverError } from "@/lib/http";
 import { getProfile, saveProfile } from "@/lib/repo";
-import type { Profile, RemotePreference } from "@/lib/types";
+import type { ExperienceLevel, Profile, RemotePreference } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -13,6 +13,7 @@ export async function GET() {
 }
 
 const REMOTE_VALUES: RemotePreference[] = ["remote", "hybrid", "onsite", "any"];
+const LEVEL_VALUES: ExperienceLevel[] = ["new-grad", "early-career", "mid", "senior"];
 
 function sanitize(input: Record<string, unknown>): Partial<Profile> {
   const patch: Partial<Profile> = {};
@@ -56,9 +57,18 @@ function sanitize(input: Record<string, unknown>): Partial<Profile> {
   } else if (typeof input.minSalary === "number" && Number.isFinite(input.minSalary)) {
     patch.minSalary = Math.max(0, Math.round(input.minSalary));
   }
+  if (input.maxYearsRequired === null) {
+    patch.maxYearsRequired = null;
+  } else if (typeof input.maxYearsRequired === "number" && Number.isFinite(input.maxYearsRequired)) {
+    patch.maxYearsRequired = Math.max(0, Math.min(30, Math.round(input.maxYearsRequired)));
+  }
   if (typeof input.autopilotEnabled === "boolean") patch.autopilotEnabled = input.autopilotEnabled;
+  if (typeof input.includeInternships === "boolean") patch.includeInternships = input.includeInternships;
   if (typeof input.remotePreference === "string" && REMOTE_VALUES.includes(input.remotePreference as RemotePreference)) {
     patch.remotePreference = input.remotePreference as RemotePreference;
+  }
+  if (typeof input.experienceLevel === "string" && LEVEL_VALUES.includes(input.experienceLevel as ExperienceLevel)) {
+    patch.experienceLevel = input.experienceLevel as ExperienceLevel;
   }
 
   return patch;

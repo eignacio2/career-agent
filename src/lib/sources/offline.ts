@@ -243,6 +243,109 @@ Requirements:
 • Bonus: feature store implementation experience.`,
   },
   {
+    sourceId: "sample-new-grad-ds",
+    title: "Data Scientist I (New Grad)",
+    company: "Rivermark Health",
+    location: "Remote (US)",
+    remote: true,
+    url: "https://example.com/rivermark/data-scientist-i-new-grad",
+    salaryText: "$95,000 - $115,000",
+    tags: ["python", "sql", "new-grad", "healthcare", "scikit-learn"],
+    daysAgo: 1,
+    description: `This is a role for someone finishing a degree in statistics, data science, computer science, or a related field. We expect to teach you our domain; we do not expect you to arrive knowing it.
+
+What you will do in your first year:
+• Own a small forecasting or classification problem end to end, with a senior data scientist reviewing your work weekly.
+• Write SQL against our claims warehouse and learn why the data is messier than any dataset you used in school.
+• Build one or two internal dashboards that clinical operations actually uses daily.
+• Present findings to non-technical stakeholders, with coaching on how to do it well.
+
+Requirements:
+• 0-2 years of professional experience. Internship and research experience counts.
+• Bachelor's or Master's in a quantitative field.
+• Solid Python (pandas, scikit-learn) and working SQL. You should be able to explain a train/test split and why it matters.
+• Genuine curiosity and the willingness to say "I do not know yet."
+
+We hire new graduates every cycle and have a structured onboarding programme with a named mentor for your first six months.
+
+Send a resume and a link to any project you are proud of to newgrad-hiring@rivermark.example.`,
+  },
+  {
+    sourceId: "sample-new-grad-ai-eng",
+    title: "Associate AI Engineer, University Graduate",
+    company: "Northgate Software",
+    location: "Remote (US) or Austin, TX",
+    remote: true,
+    url: "https://example.com/northgate/associate-ai-engineer-university-graduate",
+    salaryText: "$105,000 - $125,000",
+    tags: ["python", "llm", "rag", "new-grad", "fastapi"],
+    daysAgo: 2,
+    description: `Our university graduate programme places new engineers on the team building LLM features into our product. You will ship to production in your first month.
+
+The work:
+• Implement and evaluate retrieval pipelines: chunking, embedding, and the unglamorous work of figuring out why a specific query returns nothing useful.
+• Write the evaluation cases that prove a prompt change helped rather than just felt better.
+• Build FastAPI endpoints and the tests that keep them honest.
+• Pair regularly with senior engineers; roughly a third of your first six months is structured learning.
+
+What we ask for:
+• Graduating within the last year, or up to 1 year of professional experience.
+• Strong Python. You have built something with an LLM API, even if only for a class or a side project.
+• Comfort reading documentation and debugging without a clear answer available.
+• No prior industry ML experience required.
+
+We deliberately do not ask for years of experience beyond this. Candidates from bootcamps and non-traditional paths are welcome if the code is there.`,
+  },
+  {
+    sourceId: "sample-new-grad-mle",
+    title: "Junior Machine Learning Engineer",
+    company: "Halcyon Logistics",
+    location: "Denver, CO (Hybrid)",
+    remote: false,
+    url: "https://example.com/halcyon/junior-machine-learning-engineer",
+    salaryText: "$98,000 - $118,000",
+    tags: ["python", "ml", "docker", "junior", "aws"],
+    daysAgo: 3,
+    description: `Join a four-person ML team supporting route optimisation and delivery time prediction.
+
+Responsibilities:
+• Maintain and retrain existing demand models under supervision, gradually taking full ownership.
+• Containerise training jobs and move them onto our scheduled infrastructure.
+• Write monitoring that tells us when a model has drifted before a customer notices.
+• Contribute to code review; we expect junior engineers to ask hard questions.
+
+Requirements:
+• 1+ years of experience, including internships, or a relevant graduate degree.
+• Python and one ML framework. Docker familiarity is a plus but we will teach it.
+• Willing to be in our Denver office three days a week.
+
+This is a genuinely junior role with a defined growth path to mid-level in about two years.`,
+  },
+  {
+    sourceId: "sample-new-grad-analyst",
+    title: "Data Analyst, Early Career Program",
+    company: "Pinehurst Financial",
+    location: "Remote (US)",
+    remote: true,
+    url: "https://example.com/pinehurst/data-analyst-early-career",
+    salaryText: "$78,000 - $92,000",
+    tags: ["sql", "analytics", "python", "early-career", "tableau"],
+    daysAgo: 4,
+    description: `A two-year rotational programme for recent graduates, moving through three analytics teams: risk, marketing, and operations.
+
+What you get:
+• Rotations every eight months, so you leave knowing which kind of analytics work you actually enjoy.
+• A dedicated mentor and a cohort of other early-career analysts.
+• A conversion conversation at the end of the programme, with most participants placed into a permanent role.
+
+What we need:
+• Recent graduate, or up to 2 years of experience.
+• Strong SQL and spreadsheet skills; Python is a plus rather than a requirement.
+• Clear written communication. A lot of this job is explaining a number to someone who did not ask for it.
+
+We do not require finance coursework or prior industry experience.`,
+  },
+  {
     sourceId: "sample-junior-analyst",
     title: "Marketing Data Analyst (Entry Level)",
     company: "Tidewater Media",

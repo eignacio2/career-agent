@@ -100,11 +100,30 @@ const AI_ENGINEERING_TITLES = [
 
 const DATA_SCIENCE_TITLES = [
   /\bdata\s+scien(ce|tist)\b/,
-  /\b(applied|research|decision|staff|principal|lead|senior)\s+scientist\b/,
+  /\b(applied|research|decision|staff|principal|lead|senior|associate)\s+scientist\b/,
   /\bstatistician\b/,
   /\b(quantitative|quant)\s+(analyst|researcher|developer|scientist)\b/,
   /\beconometric/,
   /\bexperimentation\s+(scientist|analyst)\b/,
+];
+
+/**
+ * Early-career programmes are frequently titled in ways the role patterns above
+ * miss entirely ("University Graduate, Analytics" or "Rotational Analyst"), so
+ * they get their own allowlist. Recognising a posting is separate from wanting
+ * it: scoring decides that against the candidate's actual level.
+ */
+const EARLY_CAREER_TITLES = [
+  /\b(new\s?grad(uate)?|university\s+grad(uate)?|college\s+grad(uate)?|recent\s+grad(uate)?)\b/,
+  /\b(early\s+career|entry[\s-]level|graduate\s+(programme|program|scheme))\b/,
+  /\brotational\s+(analyst|program|programme)\b/,
+  /\b(analyst|engineer|scientist)\s+(i|1|one)\b/,
+];
+
+/** Levels that a candidate with little professional history should not chase. */
+const SENIOR_ONLY_TITLES = [
+  /\b(staff|principal|distinguished|fellow)\b/,
+  /\b(director|head\s+of|vp|vice\s+president|chief)\b/,
 ];
 
 const ADJACENT_TITLES = [
@@ -121,20 +140,49 @@ const HARD_REJECT_TITLES = [
   /\b(sales|account\s+executive|business\s+development|recruit(er|ing)|customer\s+(success|support)|support\s+(specialist|engineer|agent)|office\s+(assistant|manager)|executive\s+assistant)\b/,
   /\b(designer|copywriter|content\s+writer|social\s+media|marketing\s+(manager|specialist))\b/,
   /\b(teacher|tutor|nurse|driver|warehouse|technician|labeling|annotator|annotation)\b/,
-  /\b(intern|internship)\b/,
 ];
 
-function matchTitle(title: string): JobRole | null {
+const INTERNSHIP_TITLES = /\b(intern|internship|co[\s-]?op|apprentice(ship)?|summer\s+analyst)\b/;
+
+export interface TitleAssessment {
+  role: JobRole;
+  /** Explicitly framed as an early-career or new-grad opening. */
+  earlyCareer: boolean;
+  /** Staff level and above, or people management. */
+  seniorOnly: boolean;
+  internship: boolean;
+}
+
+function assessTitle(title: string): TitleAssessment | null {
   const normalized = title.toLowerCase();
   if (HARD_REJECT_TITLES.some((pattern) => pattern.test(normalized))) return null;
-  if (AI_ENGINEERING_TITLES.some((pattern) => pattern.test(normalized))) return "ai-engineering";
-  if (DATA_SCIENCE_TITLES.some((pattern) => pattern.test(normalized))) return "data-science";
-  if (ADJACENT_TITLES.some((pattern) => pattern.test(normalized))) return "adjacent";
-  return null;
+
+  const earlyCareer = EARLY_CAREER_TITLES.some((pattern) => pattern.test(normalized));
+  const seniorOnly = SENIOR_ONLY_TITLES.some((pattern) => pattern.test(normalized));
+  const internship = INTERNSHIP_TITLES.test(normalized);
+
+  let role: JobRole | null = null;
+  if (AI_ENGINEERING_TITLES.some((pattern) => pattern.test(normalized))) role = "ai-engineering";
+  else if (DATA_SCIENCE_TITLES.some((pattern) => pattern.test(normalized))) role = "data-science";
+  else if (ADJACENT_TITLES.some((pattern) => pattern.test(normalized))) role = "adjacent";
+  // An early-career programme still counts even when its title names no discipline.
+  else if (earlyCareer) role = "adjacent";
+
+  if (!role) return null;
+  return { role, earlyCareer, seniorOnly, internship };
+}
+
+export function assessJobTitle(title: string): TitleAssessment | null {
+  return assessTitle(title);
 }
 
 export function classifyRole(job: Pick<SourceJob, "title" | "tags" | "description">): JobRole {
-  return matchTitle(job.title) ?? "adjacent";
+  return assessTitle(job.title)?.role ?? "adjacent";
+}
+
+export interface TargetOptions {
+  /** Include internships and co-ops. Off by default: most people want full-time work. */
+  includeInternships?: boolean;
 }
 
 /**
@@ -142,6 +190,9 @@ export function classifyRole(job: Pick<SourceJob, "title" | "tags" | "descriptio
  * allowlist on the title is the only reliable way to keep the pipeline focused
  * on data science and AI engineering work.
  */
-export function isPlausibleTarget(job: SourceJob): boolean {
-  return matchTitle(job.title) !== null;
+export function isPlausibleTarget(job: SourceJob, options: TargetOptions = {}): boolean {
+  const assessment = assessTitle(job.title);
+  if (!assessment) return false;
+  if (assessment.internship && !options.includeInternships) return false;
+  return true;
 }

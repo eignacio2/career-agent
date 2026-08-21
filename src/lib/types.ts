@@ -1,5 +1,8 @@
 export type RemotePreference = "remote" | "hybrid" | "onsite" | "any";
 
+/** Drives how seniority and stated experience requirements are scored. */
+export type ExperienceLevel = "new-grad" | "early-career" | "mid" | "senior";
+
 export interface Profile {
   id: number;
   fullName: string;
@@ -12,6 +15,10 @@ export interface Profile {
   githubUrl: string;
   portfolioUrl: string;
   yearsExperience: number;
+  experienceLevel: ExperienceLevel;
+  /** Postings demanding more than this many years are treated as over-reach. */
+  maxYearsRequired: number | null;
+  includeInternships: boolean;
   skills: string[];
   targetTitles: string[];
   targetLocations: string[];

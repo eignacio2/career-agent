@@ -18,7 +18,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import type { Profile, RemotePreference } from "@/lib/types";
+import type { ExperienceLevel, Profile, RemotePreference } from "@/lib/types";
 
 function Section({
   title,
@@ -103,6 +103,17 @@ const REMOTE_OPTIONS: { value: RemotePreference; label: string }[] = [
   { value: "hybrid", label: "Hybrid preferred" },
   { value: "onsite", label: "On-site preferred" },
   { value: "any", label: "No preference" },
+];
+
+const LEVEL_OPTIONS: { value: ExperienceLevel; label: string; hint: string }[] = [
+  {
+    value: "new-grad",
+    label: "New graduate",
+    hint: "No full-time professional experience yet. Internships, research, and projects are the track record.",
+  },
+  { value: "early-career", label: "Early career (1–3 years)", hint: "One to three years of full-time work." },
+  { value: "mid", label: "Mid level (4–7 years)", hint: "Four to seven years of full-time work." },
+  { value: "senior", label: "Senior (8+ years)", hint: "Eight or more years of full-time work." },
 ];
 
 export function SettingsForm({ initial }: { initial: Profile }) {
@@ -198,12 +209,64 @@ export function SettingsForm({ initial }: { initial: Profile }) {
                 onChange={(v) => set("portfolioUrl", v)}
               />
             </div>
-            <div className="max-w-40">
+          </Section>
+
+          <Section
+            title="Career stage"
+            description="This is the highest-leverage setting in the whole app. It decides whether a posting is a realistic application or a wasted one, and it overrides skill overlap: a posting demanding more years than you have gets scored down no matter how well the technologies line up."
+          >
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Where you are in your career</Label>
+              <Select
+                value={profile.experienceLevel}
+                onValueChange={(value) => set("experienceLevel", value as ExperienceLevel)}
+              >
+                <SelectTrigger className="w-full sm:w-80">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEVEL_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                {LEVEL_OPTIONS.find((option) => option.value === profile.experienceLevel)?.hint}
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <TextField
-                label="Years of experience"
+                label="Years of full-time experience"
+                hint="Internships do not count here. A new grad enters 0."
                 type="number"
                 value={String(profile.yearsExperience)}
                 onChange={(v) => set("yearsExperience", Number(v) || 0)}
+              />
+              <TextField
+                label="Most years a posting may demand"
+                hint='Postings asking for more than this are treated as over-reach and skipped. Leave at 2 as a new grad — plenty of "2+ years" listings still hire graduates, but "5+ years" almost never does.'
+                type="number"
+                value={profile.maxYearsRequired === null ? "" : String(profile.maxYearsRequired)}
+                onChange={(v) => set("maxYearsRequired", v === "" ? null : Number(v) || 0)}
+                placeholder="2"
+              />
+            </div>
+
+            <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+              <div>
+                <Label className="text-sm font-medium">Include internships and co-ops</Label>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Off by default, since most people finishing a degree want full-time work. Turn it on if you are
+                  still studying or would take an internship that converts.
+                </p>
+              </div>
+              <Switch
+                checked={profile.includeInternships}
+                onCheckedChange={(checked) => set("includeInternships", checked)}
+                aria-label="Include internships"
               />
             </div>
           </Section>

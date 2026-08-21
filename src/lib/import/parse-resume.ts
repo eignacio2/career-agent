@@ -48,7 +48,7 @@ const SECTION_ALIASES: Record<string, string[]> = {
   summary: ["summary", "profile", "professional summary", "objective", "about", "about me", "overview"],
   experience: [
     "experience","work experience","professional experience","employment","employment history",
-    "work history","relevant experience","career history",
+    "work history","relevant experience","career history","internships","internship experience",
   ],
   education: ["education", "academic background", "academics", "education & training"],
   skills: [
@@ -56,7 +56,18 @@ const SECTION_ALIASES: Record<string, string[]> = {
     "technical proficiencies","tools & technologies","skills & tools",
   ],
   projects: ["projects", "selected projects", "personal projects", "side projects", "open source"],
-  certifications: ["certifications", "certification", "licenses & certifications", "licenses", "courses"],
+  certifications: [
+    "certifications","certification","licenses & certifications","licenses","courses",
+    "courses & certifications","certifications & courses","certifications and courses",
+    "training","professional development",
+  ],
+  // Recognised so their contents stop leaking into work experience. Clubs and
+  // awards are not jobs, and parsing them as employers corrupts the history.
+  other: [
+    "activities","extracurricular","extracurriculars","involvement","leadership",
+    "awards","honors","honours","awards & honors","publications","interests",
+    "volunteering","volunteer experience","references","affiliations",
+  ],
 };
 
 /** Section headings are short lines, often all-caps or title-case, with no sentence punctuation. */
@@ -102,6 +113,43 @@ const DATE_RANGE = new RegExp(
 );
 
 const BULLET = /^\s*[-•*▪◦·‣]\s*(.+)$/;
+
+/**
+ * PDF extraction preserves the printed line breaks, so a single resume bullet
+ * arrives as two or three lines. A line continues the previous one when that
+ * line was left unfinished, or when it opens mid-sentence.
+ */
+function isContinuation(line: string, previous: string | undefined): boolean {
+  if (!previous) return false;
+  if (/[.!?;:]$/.test(previous.trim())) return false;
+  return !/^[A-Z0-9]/.test(line.trim()) || previous.trim().length > 60;
+}
+
+function appendContinuation(target: string, line: string): string {
+  return `${target.replace(/\s+$/, "")} ${line.trim()}`;
+}
+
+/** Rejoins wrapped list entries, used for sections that are simple line lists. */
+function mergeWrappedLines(lines: string[]): string[] {
+  const merged: string[] = [];
+
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+    if (trimmed.length < 3) continue;
+
+    const bullet = trimmed.match(BULLET);
+    const content = (bullet ? bullet[1] : trimmed).trim();
+    const last = merged[merged.length - 1];
+
+    if (!bullet && isContinuation(content, last)) {
+      merged[merged.length - 1] = appendContinuation(last, content);
+      continue;
+    }
+    merged.push(content);
+  }
+
+  return merged.map((entry) => entry.replace(/[:\s]+$/, "")).filter((entry) => entry.length > 3);
+}
 
 function toIsoMonth(raw: string): string {
   const value = raw.trim().toLowerCase();
@@ -195,10 +243,16 @@ function parseExperience(lines: string[]): ResumeExperience[] {
       continue;
     }
 
-    // An unbulleted sentence under a role is still an accomplishment line.
-    if (current && line.trim().length > 40) {
-      current.bullets.push(line.trim());
+    if (!current) continue;
+
+    const last = current.bullets[current.bullets.length - 1];
+    if (isContinuation(line, last)) {
+      current.bullets[current.bullets.length - 1] = appendContinuation(last, line);
+      continue;
     }
+
+    // An unbulleted sentence under a role is still an accomplishment line.
+    if (line.trim().length > 40) current.bullets.push(line.trim());
   }
 
   flush();
@@ -206,6 +260,33 @@ function parseExperience(lines: string[]): ResumeExperience[] {
 }
 
 /* ---------------------------------- skills --------------------------------- */
+
+/**
+ * Splits a skill list on separators that sit outside brackets, so entries like
+ * "AWS (Lambda, DynamoDB, S3)" survive as one skill instead of fragmenting.
+ */
+function splitSkillList(value: string): string[] {
+  const items: string[] = [];
+  let depth = 0;
+  let buffer = "";
+
+  for (const char of value) {
+    if (char === "(" || char === "[") depth += 1;
+    else if (char === ")" || char === "]") depth = Math.max(0, depth - 1);
+
+    if (depth === 0 && /[,;|·•]/.test(char)) {
+      items.push(buffer);
+      buffer = "";
+      continue;
+    }
+    buffer += char;
+  }
+  items.push(buffer);
+
+  // Grouped entries such as "AWS (Lambda, DynamoDB, S3, CloudFormation)" are long
+  // but legitimate, so the ceiling only exists to reject prose that is not a skill.
+  return items.map((item) => item.trim()).filter((item) => item.length > 0 && item.length <= 100);
+}
 
 function parseSkills(lines: string[]): ResumeSkillGroup[] {
   const groups: ResumeSkillGroup[] = [];
@@ -217,22 +298,14 @@ function parseSkills(lines: string[]): ResumeSkillGroup[] {
 
     const labelled = trimmed.match(/^([A-Za-z][A-Za-z0-9 &/+#-]{2,32}):\s*(.+)$/);
     if (labelled) {
-      const items = labelled[2]
-        .split(/[,;|·•]/)
-        .map((item) => item.trim())
-        .filter(Boolean);
+      const items = splitSkillList(labelled[2]);
       if (items.length > 0) {
         groups.push({ id: nextId("sk"), label: labelled[1].trim(), items });
         continue;
       }
     }
 
-    loose.push(
-      ...trimmed
-        .split(/[,;|·•]/)
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0 && item.length < 40),
-    );
+    loose.push(...splitSkillList(trimmed));
   }
 
   if (loose.length > 0) {
@@ -255,6 +328,13 @@ function cleanFragment(value: string): string {
     .trim();
 }
 
+const SCHOOL = /\b(university|college|institute|academy|school of|polytechnic)\b/i;
+
+/**
+ * Handles both single-line entries and the common two-line layout where the
+ * institution sits above the degree. Lines carrying only supporting detail
+ * (GPA, coursework, honours) are attached to the entry above them.
+ */
 function parseEducation(lines: string[]): ResumeEducation[] {
   const entries: ResumeEducation[] = [];
 
@@ -264,23 +344,54 @@ function parseEducation(lines: string[]): ResumeEducation[] {
 
     const years = [...trimmed.matchAll(/\b(19|20)\d{2}\b/g)].map((match) => match[0]);
     const hasDegree = DEGREE.test(trimmed);
-    if (!hasDegree && years.length === 0) continue;
+    const hasSchool = SCHOOL.test(trimmed);
+    const previous = entries[entries.length - 1];
 
-    const parts = trimmed.split(/\s+[–—|,·]\s+|\s{2,}/).map((part) => part.trim()).filter(Boolean);
-    const degreePart = parts.find((part) => DEGREE.test(part)) ?? parts[0] ?? trimmed;
-    const schoolPart = parts.find((part) => part !== degreePart && !/^\d/.test(part)) ?? "";
+    if (!hasDegree && !hasSchool) {
+      if (previous) {
+        previous.detail = previous.detail ? `${previous.detail} ${trimmed}` : trimmed;
+        if (!previous.end && years.length > 0) previous.end = years[years.length - 1];
+      }
+      continue;
+    }
+
+    // A degree line directly under a bare institution line completes that entry.
+    if (hasDegree && !hasSchool && previous && previous.school && !previous.degree) {
+      previous.degree = cleanFragment(stripDetail(trimmed));
+      if (years.length > 0) previous.end = years[years.length - 1];
+      if (years.length > 1) previous.start = years[0];
+      const detail = extractDetail(trimmed);
+      if (detail) previous.detail = previous.detail ? `${previous.detail} ${detail}` : detail;
+      continue;
+    }
+
+    const parts = trimmed.split(/\s+[–—|·]\s+|,\s+|\s{2,}/).map((part) => part.trim()).filter(Boolean);
+    const degreePart = parts.find((part) => DEGREE.test(part)) ?? (hasDegree ? trimmed : "");
+    const schoolPart = parts.find((part) => SCHOOL.test(part)) ?? (hasSchool ? parts[0] ?? "" : "");
 
     entries.push({
       id: nextId("edu"),
-      degree: cleanFragment(degreePart),
+      degree: cleanFragment(stripDetail(degreePart)),
       school: cleanFragment(schoolPart),
       start: years.length > 1 ? years[0] : "",
       end: years.length > 0 ? years[years.length - 1] : "",
-      detail: "",
+      detail: extractDetail(trimmed),
     });
   }
 
-  return entries;
+  return entries.filter((entry) => entry.degree || entry.school);
+}
+
+const DETAIL_LABEL = /\b(GPA|Expected\s+Graduation|Graduation|Honors|Honours|Dean's\s+List|Minor)\b[:\s]*/i;
+
+function stripDetail(value: string): string {
+  const index = value.search(DETAIL_LABEL);
+  return index >= 0 ? value.slice(0, index) : value;
+}
+
+function extractDetail(value: string): string {
+  const index = value.search(DETAIL_LABEL);
+  return index >= 0 ? value.slice(index).replace(/\s{2,}/g, " ").trim() : "";
 }
 
 /* --------------------------------- projects -------------------------------- */
@@ -344,7 +455,13 @@ function guessName(preamble: string[]): string {
 
     const words = line.split(/\s+/);
     if (words.length >= 2 && words.length <= 5 && /^[A-Z]/.test(line) && !/\d/.test(line)) {
-      return line.replace(/[,|].*$/, "").trim();
+      const name = line.replace(/[,|].*$/, "").trim();
+      // Resume headers are often set in all caps; store it the way a person writes it.
+      return name === name.toUpperCase()
+        ? name
+            .toLowerCase()
+            .replace(/(^|[\s-])([a-z])/g, (_match, prefix: string, letter: string) => prefix + letter.toUpperCase())
+        : name;
     }
   }
   return "";
@@ -366,9 +483,7 @@ function parseHeuristically(text: string): ParsedImport {
   const education = parseEducation(sections.education ?? []);
   const projects = parseProjects(sections.projects ?? []);
   const summary = (sections.summary ?? []).join(" ").replace(/\s+/g, " ").trim();
-  const certifications = (sections.certifications ?? [])
-    .map((line) => line.replace(BULLET, "$1").trim())
-    .filter((line) => line.length > 3);
+  const certifications = mergeWrappedLines(sections.certifications ?? []);
 
   const links = [
     linkedin ? { label: "LinkedIn", url: linkedin } : null,

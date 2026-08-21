@@ -89,10 +89,12 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
       }
     }
 
-    const plausible = discovery.jobs.filter(isPlausibleTarget);
+    const plausible = discovery.jobs.filter((job) =>
+      isPlausibleTarget(job, { includeInternships: profile.includeInternships }),
+    );
     log.add(
       "filter",
-      `${plausible.length} of ${discovery.jobs.length} postings passed the pre-filter for data science and AI engineering work.`,
+      `${plausible.length} of ${discovery.jobs.length} postings passed the pre-filter for data science and AI engineering work${profile.includeInternships ? ", internships included" : ""}.`,
     );
 
     const freshJobs: Job[] = [];
