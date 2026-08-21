@@ -1,24 +1,94 @@
-import { Info } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 
 import { PageHeader } from "@/components/app-shell";
 import { CopyButton } from "@/components/copy-button";
+import { LinkedInImport } from "@/components/linkedin-import";
 import { RegeneratePackButton } from "@/components/regenerate-pack-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { getLatestLinkedInPack, getProfile } from "@/lib/repo";
+import { getLatestLinkedInPack, getLinkedInSnapshot, getProfile } from "@/lib/repo";
+import type { LinkedInChange } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+const SEVERITY: Record<LinkedInChange["severity"], { label: string; tone: string; ring: string }> = {
+  critical: {
+    label: "Fix first",
+    tone: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
+    ring: "border-red-200 dark:border-red-900",
+  },
+  recommended: {
+    label: "Worth doing",
+    tone: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+    ring: "border-amber-200 dark:border-amber-900",
+  },
+  polish: {
+    label: "Polish",
+    tone: "bg-muted text-muted-foreground",
+    ring: "border-border",
+  },
+};
+
+function ChangeCard({ change }: { change: LinkedInChange }) {
+  const severity = SEVERITY[change.severity];
+
+  return (
+    <li className={cn("rounded-xl border bg-card p-5", severity.ring)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", severity.tone)}>
+          {severity.label}
+        </span>
+        <h3 className="text-sm font-semibold">{change.field}</h3>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-start">
+        <div className="rounded-lg bg-muted/50 p-3">
+          <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+            What it says now
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground line-through decoration-muted-foreground/40">
+            {change.current}
+          </p>
+        </div>
+
+        <ArrowRight className="hidden size-4 shrink-0 self-center text-muted-foreground lg:block" />
+
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/40">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-emerald-800 dark:text-emerald-300">
+              Change it to
+            </div>
+            <CopyButton value={change.proposed} size="icon" variant="ghost" />
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-foreground">{change.proposed}</p>
+        </div>
+      </div>
+
+      <p className="mt-3.5 text-xs leading-relaxed text-muted-foreground">
+        <span className="font-medium text-foreground/70">Why:</span> {change.why}
+      </p>
+    </li>
+  );
+}
 
 export default function LinkedInPage() {
   const pack = getLatestLinkedInPack();
   const profile = getProfile();
+  const stored = getLinkedInSnapshot();
+  const changes = pack?.changes ?? [];
 
   return (
     <div className="pb-16">
       <PageHeader
         title="LinkedIn update pack"
-        description="Rewritten profile copy, ranked against the requirements that actually appear in the postings the agent is finding. Regenerated on every run."
-        actions={<RegeneratePackButton hasPack={Boolean(pack)} />}
+        description="Rewritten profile copy, ranked against the requirements that actually appear in the postings the agent is finding. Upload your current profile and it will tell you exactly which fields to change and why."
+        actions={
+          <>
+            <LinkedInImport hasSnapshot={Boolean(stored)} />
+            <RegeneratePackButton hasPack={Boolean(pack)} />
+          </>
+        }
       />
 
       <div className="space-y-6 px-5 py-6 sm:px-8">
@@ -32,6 +102,37 @@ export default function LinkedInPage() {
             account.
           </AlertDescription>
         </Alert>
+
+        {changes.length > 0 ? (
+          <section>
+            <div className="mb-3">
+              <h2 className="text-sm font-semibold">
+                {changes.length} change{changes.length === 1 ? "" : "s"} to make on your profile
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Compared against the profile you uploaded
+                {stored
+                  ? ` on ${new Date(stored.capturedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                  : ""}
+                . Ordered by how much each one costs you.
+              </p>
+            </div>
+            <ul className="space-y-3">
+              {changes.map((change, index) => (
+                <ChangeCard key={`${change.field}-${index}`} change={change} />
+              ))}
+            </ul>
+          </section>
+        ) : stored ? (
+          <Alert>
+            <Info className="size-4" />
+            <AlertTitle>No problems found against your uploaded profile</AlertTitle>
+            <AlertDescription>
+              Your headline, About section, and top skills already line up with the roles you are targeting. The
+              rewritten copy below is still available if you want to compare.
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
         {!pack ? (
           <div className="rounded-xl border border-dashed px-6 py-16 text-center">

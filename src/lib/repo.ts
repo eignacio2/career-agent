@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import type { LinkedInSnapshot } from "./import/linkedin";
 import { DEFAULT_PROFILE, DEFAULT_RESUME } from "./seed";
 import type {
   AgentRun,
@@ -8,6 +9,7 @@ import type {
   DigestStats,
   Job,
   JobStatus,
+  LinkedInChange,
   LinkedInPack,
   Profile,
   Resume,
@@ -546,6 +548,7 @@ function mapPack(row: JobRow): LinkedInPack {
     ),
     openToWork: row.open_to_work as string,
     rationale: parseJson<string[]>(row.rationale, []),
+    changes: parseJson<LinkedInChange[]>(row.changes, []),
     generatedBy: row.generated_by as string,
     createdAt: row.created_at as string,
   };
@@ -554,8 +557,8 @@ function mapPack(row: JobRow): LinkedInPack {
 export function insertLinkedInPack(pack: Omit<LinkedInPack, "id" | "createdAt">): LinkedInPack {
   const info = getDb()
     .prepare(
-      `INSERT INTO linkedin_packs (headline, about, skills, experience_rewrites, open_to_work, rationale, generated_by, created_at)
-       VALUES (@headline, @about, @skills, @experienceRewrites, @openToWork, @rationale, @generatedBy, @createdAt)`,
+      `INSERT INTO linkedin_packs (headline, about, skills, experience_rewrites, open_to_work, rationale, changes, generated_by, created_at)
+       VALUES (@headline, @about, @skills, @experienceRewrites, @openToWork, @rationale, @changes, @generatedBy, @createdAt)`,
     )
     .run({
       headline: pack.headline,
@@ -564,6 +567,7 @@ export function insertLinkedInPack(pack: Omit<LinkedInPack, "id" | "createdAt">)
       experienceRewrites: JSON.stringify(pack.experienceRewrites),
       openToWork: pack.openToWork,
       rationale: JSON.stringify(pack.rationale),
+      changes: JSON.stringify(pack.changes ?? []),
       generatedBy: pack.generatedBy,
       createdAt: now(),
     });
@@ -578,4 +582,32 @@ export function getLatestLinkedInPack(): LinkedInPack | null {
     .prepare("SELECT * FROM linkedin_packs ORDER BY created_at DESC LIMIT 1")
     .get() as JobRow | undefined;
   return row ? mapPack(row) : null;
+}
+
+/* ---------------------------- linkedin snapshot ---------------------------- */
+
+export interface StoredSnapshot {
+  snapshot: LinkedInSnapshot;
+  capturedAt: string;
+}
+
+export function saveLinkedInSnapshot(snapshot: LinkedInSnapshot): StoredSnapshot {
+  const capturedAt = now();
+  getDb()
+    .prepare(
+      `INSERT INTO linkedin_snapshot (id, data, captured_at) VALUES (1, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET data = excluded.data, captured_at = excluded.captured_at`,
+    )
+    .run(JSON.stringify(snapshot), capturedAt);
+  return { snapshot, capturedAt };
+}
+
+export function getLinkedInSnapshot(): StoredSnapshot | null {
+  const row = getDb()
+    .prepare("SELECT data, captured_at FROM linkedin_snapshot WHERE id = 1")
+    .get() as { data: string; captured_at: string } | undefined;
+  if (!row) return null;
+
+  const snapshot = parseJson<LinkedInSnapshot | null>(row.data, null);
+  return snapshot ? { snapshot, capturedAt: row.captured_at } : null;
 }

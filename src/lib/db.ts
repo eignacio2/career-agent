@@ -107,8 +107,15 @@ function migrate(db: Database.Database) {
       experience_rewrites TEXT NOT NULL DEFAULT '[]',
       open_to_work TEXT NOT NULL DEFAULT '',
       rationale TEXT NOT NULL DEFAULT '[]',
+      changes TEXT NOT NULL DEFAULT '[]',
       generated_by TEXT NOT NULL DEFAULT 'heuristic',
       created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS linkedin_snapshot (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      data TEXT NOT NULL,
+      captured_at TEXT NOT NULL
     );
 
     CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
@@ -116,6 +123,22 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);
     CREATE INDEX IF NOT EXISTS idx_digests_created ON digests(created_at DESC);
   `);
+
+  // CREATE TABLE IF NOT EXISTS leaves existing tables untouched, so columns added
+  // after a database was first created have to be applied separately.
+  addColumnIfMissing(db, "linkedin_packs", "changes", "TEXT NOT NULL DEFAULT '[]'");
+}
+
+function addColumnIfMissing(
+  db: Database.Database,
+  table: string,
+  column: string,
+  definition: string,
+) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (columns.length === 0) return;
+  if (columns.some((entry) => entry.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 
 export function getDb(): Database.Database {

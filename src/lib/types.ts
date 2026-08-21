@@ -199,6 +199,15 @@ export interface RunLogEntry {
   level: "info" | "warn" | "error";
 }
 
+/** A specific edit to make on LinkedIn, with the current value for comparison. */
+export interface LinkedInChange {
+  field: string;
+  current: string;
+  proposed: string;
+  why: string;
+  severity: "critical" | "recommended" | "polish";
+}
+
 export interface LinkedInPack {
   id: number;
   headline: string;
@@ -207,6 +216,7 @@ export interface LinkedInPack {
   experienceRewrites: { company: string; role: string; bullets: string[] }[];
   openToWork: string;
   rationale: string[];
+  changes: LinkedInChange[];
   generatedBy: string;
   createdAt: string;
 }

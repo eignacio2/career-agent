@@ -264,7 +264,8 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
 
     if (options.refreshLinkedIn !== false) {
       const marketJobs = repo.listJobs({ limit: 60 });
-      const pack = await generateLinkedInPack(profile, resume, marketJobs);
+      const stored = repo.getLinkedInSnapshot();
+      const pack = await generateLinkedInPack(profile, resume, marketJobs, stored?.snapshot);
       repo.insertLinkedInPack(pack);
       log.add(
         "profile",
