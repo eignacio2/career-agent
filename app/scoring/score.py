@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
-from app.geo import foreign_onsite_label, is_remote, matches_target_city
+from app.geo import foreign_onsite_label, is_chicago_office, is_remote, mentions_chicago
 from app.models import ExperienceLevel, Job, Profile, Resume, ScoredMatch, SourceJob
 from app.sources.filter import assess_job_title
 
@@ -267,23 +267,16 @@ def _requires_foreign_authorization(job: Job, profile: Profile) -> str | None:
 
 
 def _location_fit(job: Job, profile: Profile) -> tuple[int, str]:
-    wants_remote = profile.remote_preference == "remote"
-
+    if is_chicago_office(job):
+        loc = job.location or "Chicago"
+        if "hybrid" in loc.lower():
+            return 16, f"Chicago hybrid ({loc}), which you can attend."
+        return 16, f"Chicago office ({loc}), which matches where you are."
+    if mentions_chicago(job):
+        return 4, "Names Chicago but reads as remote-only."
     if is_remote(job):
-        if wants_remote or profile.remote_preference == "any":
-            return 16, "Remote role, which matches your stated preference."
-        return 12, "Remote role."
-
-    location = (job.location or "").lower().strip()
-    if not location:
-        return 9, "The posting does not state a location, so this needs checking by hand."
-
-    if matches_target_city(job, profile):
-        return 13, f"Located in a target market ({job.location})."
-
-    if wants_remote:
-        return 2, f"On-site in {job.location}, but you are looking for remote work."
-    return 7, f"On-site in {job.location}."
+        return 2, "Remote-only; you are looking for a Chicago office or hybrid role."
+    return 2, f"On-site in {job.location}, not a Chicago office."
 
 
 def _salary_fit(job: Job, profile: Profile) -> tuple[int, str | None]:

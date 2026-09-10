@@ -27,11 +27,14 @@ def test_offline_run_queues_new_grad_and_caps_senior(tmp_db):
     # Title pre-filter drops the office assistant before it is stored.
     assert "Office Assistant — AI Lab Admin" not in titles
 
-    # Location filter (us-or-remote) drops foreign on-site before scoring.
+    # Location filter keeps Chicago office/hybrid only.
     assert "Thames Analytics" not in {job.company for job in jobs}
     assert "Neckar Mobility" not in {job.company for job in jobs}
+    assert "Halcyon Logistics" not in {job.company for job in jobs}  # Denver hybrid
+    assert titles["Associate AI Engineer, University Graduate"].location.startswith("Chicago")
+    assert titles["Forward Deployed Engineer, New Grad"].location.startswith("Chicago")
 
-    # Senior/staff AI titles still reach the scorer so the cap can fire.
+    # Senior/staff AI titles in Chicago still reach the scorer so the cap can fire.
     assert "Staff Machine Learning Engineer" in titles
     staff = titles["Staff Machine Learning Engineer"]
     assert staff.status == "skipped"

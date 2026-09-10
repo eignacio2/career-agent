@@ -177,7 +177,7 @@ def generate_linkedin_pack(
 
     titles = " / ".join(profile.target_titles[:2]) or "AI Engineer"
     headline_skills = [_display(skill, casing) for skill, _ in validated[:4]]
-    arrangement = "Open to remote" if profile.remote_preference != "onsite" else f"Based in {profile.location}"
+    arrangement = "Hybrid or on-site in Chicago"
     skill_bit = " · ".join(headline_skills) if headline_skills else "Python · SQL · agents"
     headline = f"{titles} · {skill_bit} · {arrangement}"[:220]
 
@@ -198,7 +198,7 @@ def generate_linkedin_pack(
         "",
         (
             f"Currently open to {', '.join(profile.target_titles[:3])} roles "
-            f"(remote US or {profile.location}). Fastest contact: {profile.email}."
+            f"in Chicago (hybrid or on-site). Fastest contact: {profile.email}."
         ),
     ]
     about = "\n".join(about_lines)
@@ -240,8 +240,8 @@ def generate_linkedin_pack(
         skills=skills,
         experience_rewrites=rewrites,
         open_to_work=(
-            f"Open to {', '.join(profile.target_titles[:4])} · Remote, hybrid, or on-site in "
-            f"{profile.location} · Starting after May 2026 graduation"
+            f"Open to {', '.join(profile.target_titles[:4])} · Hybrid or on-site in "
+            f"Chicago, IL · Starting after May 2026 graduation"
         ),
         rationale=rationale,
         generated_by="heuristic",

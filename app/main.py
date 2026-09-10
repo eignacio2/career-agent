@@ -103,7 +103,7 @@ def save_settings(
     target_titles: Annotated[str, Form()] = "",
     target_locations: Annotated[str, Form()] = "",
     remote_preference: Annotated[str, Form()] = "any",
-    location_mode: Annotated[str, Form()] = "us-or-remote",
+    location_mode: Annotated[str, Form()] = "chicago-office",
     min_salary: Annotated[str, Form()] = "",
     excluded_companies: Annotated[str, Form()] = "",
     excluded_keywords: Annotated[str, Form()] = "",
@@ -118,8 +118,8 @@ def save_settings(
         experience_level = "new-grad"
     if remote_preference not in ("remote", "hybrid", "onsite", "any"):
         remote_preference = "any"
-    if location_mode not in ("any", "us-or-remote", "targets-or-remote"):
-        location_mode = "us-or-remote"
+    if location_mode not in ("chicago-office", "any"):
+        location_mode = "chicago-office"
 
     updated = current.model_copy(
         update={

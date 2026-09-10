@@ -25,7 +25,8 @@ DEFAULT_PROFILE = Profile(
     headline="New-grad CS · AI Engineer / Forward Deployed Engineer (agents, n8n, Gemini)",
     summary=(
         "Computer science student at UIC (expected May 2026) targeting new-grad "
-        "AI engineering and forward deployed engineering roles. Strongest demonstrated "
+        "AI engineering and forward deployed engineering roles in Chicago "
+        "(on-site or hybrid, not remote-only). Strongest demonstrated "
         "work is AI agent engineering (Wayfair externship: n8n + Gemini) — wiring LLM "
         "tools into real workflows with a customer-adjacent constraint. Not a classic "
         "data science hire (pandas/scikit-learn/experimentation are thin); do not invent that."
@@ -66,19 +67,10 @@ DEFAULT_PROFILE = Profile(
         "Customer Engineer",
     ],
     target_locations=[
-        "Remote (US)",
         "Chicago, IL",
-        "New York, NY",
-        "San Francisco, CA",
-        "Palo Alto, CA",
-        "Seattle, WA",
-        "Washington, DC",
-        "Austin, TX",
-        "Boston, MA",
-        "Denver, CO",
     ],
-    remote_preference="any",
-    location_mode="us-or-remote",
+    remote_preference="hybrid",
+    location_mode="chicago-office",
     min_salary=85000,
     excluded_companies=[],
     required_keywords=[],
@@ -95,7 +87,7 @@ DEFAULT_RESUME = Resume(
         title="New-grad CS · AI Engineer / Forward Deployed Engineer",
         email="ethignacio25@gmail.com",
         phone="630-524-8692",
-        location="Chicago, IL · Open to remote",
+        location="Chicago, IL · Hybrid or on-site",
         links=[
             {"label": "LinkedIn", "url": "https://www.linkedin.com/in/ethan-ignacio/"},
             {"label": "GitHub", "url": "https://github.com/eignacio2"},
@@ -103,7 +95,7 @@ DEFAULT_RESUME = Resume(
         summary=(
             "UIC computer science student (May 2026) with an AI Agent Engineering "
             "externship at Wayfair. Looking for a first full-time AI engineering "
-            "or forward deployed engineering role. Comfortable wiring LLM tools into "
+            "or forward deployed engineering role in Chicago (hybrid or on-site). Comfortable wiring LLM tools into "
             "real workflows; not yet a production ML or experimentation hire."
         ),
     ),

@@ -204,11 +204,11 @@ def _refresh_stale_search_defaults(conn: sqlite3.Connection) -> None:
         data["target_titles"] = DEFAULT_PROFILE.target_titles
         data["headline"] = DEFAULT_PROFILE.headline
         data["summary"] = DEFAULT_PROFILE.summary
-        data["target_locations"] = DEFAULT_PROFILE.target_locations
-        data["location_mode"] = DEFAULT_PROFILE.location_mode
         changed = True
-    elif not data.get("location_mode"):
-        data["location_mode"] = DEFAULT_PROFILE.location_mode
+    if data.get("location_mode") in (None, "", "us-or-remote", "targets-or-remote"):
+        data["location_mode"] = "chicago-office"
+        data["target_locations"] = DEFAULT_PROFILE.target_locations
+        data["remote_preference"] = "hybrid"
         changed = True
     if changed:
         conn.execute(

@@ -159,7 +159,7 @@ def _run(
             (
                 f"{len(title_ok)} of {len(discovery.jobs)} postings passed the title pre-filter "
                 f"(AI Engineer / Forward Deployed). "
-                f"{len(plausible)} also passed the location filter "
+                f"{len(plausible)} also passed the Chicago office/hybrid filter "
                 f"({profile.location_mode}); dropped {dropped_location} on location."
             ),
         )

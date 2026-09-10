@@ -11,12 +11,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 RemotePreference = Literal["remote", "hybrid", "onsite", "any"]
 ExperienceLevel = Literal["new-grad", "early-career", "mid", "senior"]
 JobRole = Literal["data-science", "ai-engineering", "forward-deployed", "adjacent"]
-LocationMode = Literal["any", "us-or-remote", "targets-or-remote"]
+LocationMode = Literal["chicago-office", "any"]
 JobStatus = Literal["new", "shortlisted", "queued", "applied", "skipped", "expired"]
 RunStatus = Literal["running", "success", "failed"]
 LogLevel = Literal["info", "warn", "error"]
@@ -94,8 +94,8 @@ class Profile(BaseModel):
     skills: list[str] = Field(default_factory=list)
     target_titles: list[str] = Field(default_factory=list)
     target_locations: list[str] = Field(default_factory=list)
-    remote_preference: RemotePreference = "any"
-    location_mode: LocationMode = "us-or-remote"
+    remote_preference: RemotePreference = "hybrid"
+    location_mode: LocationMode = "chicago-office"
     min_salary: int | None = None
     excluded_companies: list[str] = Field(default_factory=list)
     required_keywords: list[str] = Field(default_factory=list)
@@ -104,6 +104,13 @@ class Profile(BaseModel):
     daily_application_cap: int = 10
     autopilot_enabled: bool = False
     digest_email: str = ""
+
+    @field_validator("location_mode", mode="before")
+    @classmethod
+    def _coerce_location_mode(cls, value: object) -> object:
+        if value in (None, "", "us-or-remote", "targets-or-remote"):
+            return "chicago-office"
+        return value
 
 
 class SourceJob(BaseModel):

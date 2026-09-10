@@ -12,8 +12,8 @@ def test_new_grad_role_clears_threshold():
         title="Associate AI Engineer, University Graduate",
         early_career=True,
         role_family="ai-engineering",
-        remote=True,
-        location="Remote (US)",
+        remote=False,
+        location="Chicago, IL (Hybrid)",
         description=(
             "University graduate programme. Graduating within the last year. "
             "Strong Python. LLM API, FastAPI, RAG. No prior industry ML required."
@@ -33,7 +33,7 @@ def test_new_grad_fde_clears_threshold():
         early_career=True,
         role_family="forward-deployed",
         remote=False,
-        location="New York, NY",
+        location="Chicago, IL",
         description=(
             "Graduating this year. Strong Python. LLM API and customer-facing engineering. "
             "0-1 years of professional experience."
@@ -151,7 +151,8 @@ def test_mid_level_candidate_is_not_capped_on_five_years():
     job = make_job(
         title="Data Scientist, Experimentation",
         role_family="data-science",
-        remote=True,
+        remote=False,
+        location="Chicago, IL",
         description="5+ years in a data science role. Python, SQL, experimentation.",
         tags=["python", "sql"],
     )

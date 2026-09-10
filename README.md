@@ -56,13 +56,9 @@ Boards that need a key or that 401 without login (Hugging Face jobs, most ATS se
 
 ## Location filter
 
-Scoring still awards location points. There is now also a **hard pre-filter** on `profile.location_mode`:
+One rule, on purpose: **Chicago on-site or hybrid**. Remote-only, NYC/SF, and foreign hubs are dropped before scoring. `location_mode=any` turns the hard filter off (tests / scoring demos).
 
-- `us-or-remote` (default) — keep US on-site and US/unspecified remote; drop London/Stuttgart/Tokyo/UK-restricted postings even when they say remote
-- `targets-or-remote` — remote, or a city listed in `target_locations`
-- `any` — old behavior: score only, no drop
-
-Change it on the settings page or by editing the stored profile. Target cities default to Remote (US), Chicago, NYC, SF, Palo Alto, Seattle, DC, Austin, Boston, Denver.
+That is easier to walk through than a US-vs-remote country list. The function is `is_chicago_office` in `app/geo.py`.
 
 ## What happens in one run
 
@@ -81,7 +77,7 @@ Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. Set `autopilot_ena
 - `tests/test_extract_years.py` — `4+ years` counts; “past 5 years” does not
 - `tests/test_score.py` — new-grad AI Engineer / FDE clears 72; 5+ years senior is capped below it
 - `tests/test_filter.py` — Data Scientist and Office Assistant never reach the scorer as targets
-- `tests/test_location.py` — London on-site is dropped under `us-or-remote`
+- `tests/test_location.py` — Chicago hybrid/on-site is kept; Remote (US) and NYC are dropped
 - `tests/test_tailor.py` — tailored resume still contains Wayfair, never invents employers
 - `tests/test_linkedin.py` — headline drops “seeking internship” / Microsoft Office
 - `tests/test_cli.py` — `python -m app run --offline` is the product

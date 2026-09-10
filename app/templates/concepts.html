@@ -17,7 +17,7 @@
     <dt>Title pre-filter before scoring</dt>
     <dd>Boards return keyword soup. Matching the body is how “Office Assistant — AI Lab Admin” looked like an agents role. The allowlist is title-only and currently keeps AI Engineer and Forward Deployed Engineer — data-science titles never pay a scoring pass.</dd>
     <dt>Location pre-filter</dt>
-    <dd>A London on-site Machine Learning Engineer is a real posting and would otherwise score well enough to distract. <code>location_mode=us-or-remote</code> drops it before insert. Remote stays. Target-cities-only is the stricter option.</dd>
+    <dd>Can you show up in Chicago? Hybrid counts. Remote-only and other cities are dropped before insert. That is one function (<code>is_chicago_office</code>), not a country list.</dd>
     <dt>allSettled, not all</dt>
     <dd>If Arbeitnow times out, Remotive and the new-grad board still count. Empty live results fall back to the sample board so the rest of the pipeline is always testable.</dd>
     <dt>Caps, not penalties</dt>

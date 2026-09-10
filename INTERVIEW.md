@@ -18,13 +18,13 @@ python3 -m app queued
 python3 -m app digest
 ```
 
-Say: these came from the New Grad Positions board, remote aggregators, and company career APIs (Palantir Lever, Anduril/Anthropic/Scale Greenhouse, OpenAI/Harvey Ashby). Title filter keeps AI Engineer and Forward Deployed Engineer; data-science titles are dropped. Location filter drops foreign on-site. Anything still queued cleared 72. ATS links are in the list; the agent does not submit the form.
+Say: these came from the New Grad Positions board, remote aggregators, and company career APIs (Palantir Lever, Anduril/Anthropic/Scale Greenhouse, OpenAI/Harvey Ashby). Title filter keeps AI Engineer and Forward Deployed Engineer; data-science titles are dropped. Location filter keeps Chicago on-site or hybrid only. Anything still queued cleared 72. ATS links are in the list; the agent does not submit the form.
 
 `--offline` is the **test fixture**, not the demo. Use it only if they ask “how do you test without the network?” — then run `pytest` and, if you want, `python3 -m app run --offline` to show a Senior 5+ years role getting capped.
 
 ## 2. Pipeline (3 min) — `app/pipeline.py`
 
-Discover every board independently (one timeout does not abort the others). Fallback to sample board. Title filter (AI Eng / FDE only). Location filter (`us-or-remote` by default). Insert if new (`UNIQUE source, source_id`). Score. Tailor only the queued ones. Email only when the posting lists an address **and** autopilot is on. Digest is markdown; SMTP is optional.
+Discover every board independently (one timeout does not abort the others). Fallback to sample board. Title filter (AI Eng / FDE only). Location filter: Chicago office or hybrid (`app/geo.py`). Insert if new (`UNIQUE source, source_id`). Score. Tailor only the queued ones. Email only when the posting lists an address **and** autopilot is on. Digest is markdown; SMTP is optional.
 
 ## 3. Why the filter is title-only (2 min) — `app/sources/filter.py`
 
@@ -50,4 +50,4 @@ Greenhouse/Lever/Workday/Easy Apply are not filled in. LinkedIn is a copy-paste 
 
 - **Why SQLite?** One candidate, one machine, no ops. WAL + a transaction for score+status.
 - **Why no LLM?** Every number in scoring is deterministic and tested. An LLM overlay that cannot override `Excluded` or raise a cap is a later addition, not the core.
-- **Work authorization?** On-site London/Stuttgart is **dropped** under `location_mode=us-or-remote` (default), and so is remote that is clearly tied to a foreign hub (Tokyo in the title, Jobicy `UK`). If you turn the filter to `any`, those roles are still capped at 50 when they are on-site. Unspecified US remote is kept.
+- **Work authorization / location?** Default filter is Chicago on-site or hybrid. NYC, remote-only, and London never reach the scorer. If you set `location_mode=any`, foreign on-site is still capped at 50.
