@@ -63,6 +63,30 @@ What we ask for:
 We deliberately do not ask for years of experience beyond this.""",
     },
     {
+        "source_id": "sample-new-grad-fde",
+        "title": "Forward Deployed Engineer, New Grad",
+        "company": "Kestrel Applied",
+        "location": "New York, NY",
+        "remote": False,
+        "url": "https://example.com/kestrel/forward-deployed-engineer-new-grad",
+        "salary_text": "$120,000 - $145,000",
+        "tags": ["python", "llm", "new-grad", "customer", "agents"],
+        "days_ago": 1,
+        "description": """New-graduate forward deployed engineers sit with customers and ship working AI workflows into their environment. You will not be a researcher; you will be the person who makes the product actually run.
+
+The work:
+• Embed with a customer team for a few weeks at a time, figure out where an LLM agent or retrieval pipeline would remove a real bottleneck, and ship it.
+• Write Python glue, prompts, and evaluations so the workflow keeps working after you leave.
+• Translate messy operational constraints back to the product team.
+
+What we ask for:
+• Graduating this year or up to 1 year of professional experience.
+• Strong Python. You have built something with an LLM API, even if only for a class, intern, or externship.
+• Comfort talking to non-engineers. This is a customer-facing engineering role, not a sales role.
+
+Send a resume to newgrad@kestrel.example.""",
+    },
+    {
         "source_id": "sample-junior-mle",
         "title": "Junior Machine Learning Engineer",
         "company": "Halcyon Logistics",
@@ -263,6 +287,7 @@ class SampleSource:
                     tags=list(seed["tags"]),
                     posted_at=(now - timedelta(days=seed["days_ago"])).isoformat(),
                     early_career="new-grad" in seed["title"].lower()
+                    or "new grad" in seed["title"].lower()
                     or "university graduate" in seed["title"].lower()
                     or "early career" in seed["title"].lower()
                     or "junior" in seed["title"].lower(),

@@ -103,6 +103,7 @@ def save_settings(
     target_titles: Annotated[str, Form()] = "",
     target_locations: Annotated[str, Form()] = "",
     remote_preference: Annotated[str, Form()] = "any",
+    location_mode: Annotated[str, Form()] = "us-or-remote",
     min_salary: Annotated[str, Form()] = "",
     excluded_companies: Annotated[str, Form()] = "",
     excluded_keywords: Annotated[str, Form()] = "",
@@ -117,6 +118,8 @@ def save_settings(
         experience_level = "new-grad"
     if remote_preference not in ("remote", "hybrid", "onsite", "any"):
         remote_preference = "any"
+    if location_mode not in ("any", "us-or-remote", "targets-or-remote"):
+        location_mode = "us-or-remote"
 
     updated = current.model_copy(
         update={
@@ -135,6 +138,7 @@ def save_settings(
             "target_titles": _csv(target_titles),
             "target_locations": _csv(target_locations),
             "remote_preference": remote_preference,  # type: ignore[typeddict-item]
+            "location_mode": location_mode,  # type: ignore[typeddict-item]
             "min_salary": salary,
             "excluded_companies": _csv(excluded_companies),
             "excluded_keywords": _csv(excluded_keywords),

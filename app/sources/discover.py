@@ -13,12 +13,24 @@ from dataclasses import dataclass, field
 from app.config import OFFLINE
 from app.models import SourceJob
 from app.sources.arbeitnow import ArbeitnowSource
+from app.sources.company_boards import company_board_sources
+from app.sources.himalayas import HimalayasSource
+from app.sources.jobicy import JobicySource
 from app.sources.newgrad import NewGradSource
+from app.sources.remoteok import RemoteOKSource
 from app.sources.remotive import RemotiveSource
 from app.sources.sample import SampleSource
 from app.sources.types import JobSource
 
-LIVE_SOURCES: list[JobSource] = [NewGradSource(), RemotiveSource(), ArbeitnowSource()]
+LIVE_SOURCES: list[JobSource] = [
+    NewGradSource(),
+    RemotiveSource(),
+    ArbeitnowSource(),
+    RemoteOKSource(),
+    JobicySource(),
+    HimalayasSource(),
+    *company_board_sources(),
+]
 FALLBACK_SOURCE: JobSource = SampleSource()
 
 

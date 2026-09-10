@@ -15,11 +15,19 @@ from app.apply import channel_for, submit_by_email
 from app.digest import build_digest_text, write_digest_file
 from app.linkedin import generate_linkedin_pack, render_linkedin_markdown
 from app.mail import MailMessage, is_smtp_configured, send_mail
+from app.geo import location_allowed
 from app.models import Job, RunLogEntry, RunStats, TailoredApplication, now_iso
 from app.scoring.score import score_job
 from app.sources.discover import discover
 from app.sources.filter import classify_role, is_plausible_target
 from app.tailor import tailor_application
+
+DEFAULT_QUERIES = [
+    "ai engineer",
+    "forward deployed engineer",
+    "machine learning engineer",
+    "customer engineer",
+]
 
 _run_lock = threading.Lock()
 SHORTLIST_MARGIN = 12
@@ -108,7 +116,7 @@ def _run(
             ),
         )
 
-        queries = profile.target_titles or ["data scientist", "ai engineer"]
+        queries = profile.target_titles or DEFAULT_QUERIES
         discovery = discover(queries, limit_per_source, offline=offline)
 
         if discovery.used_fallback:
@@ -133,14 +141,27 @@ def _run(
             if discovery.sources_failed:
                 log.add("discover", f"No results from {', '.join(discovery.sources_failed)}.", "warn")
 
-        plausible = [
+        title_ok = [
             job
             for job in discovery.jobs
             if is_plausible_target(job, include_internships=profile.include_internships)
         ]
+        plausible: list = []
+        dropped_location = 0
+        for job in title_ok:
+            allowed, reason = location_allowed(job, profile)
+            if allowed:
+                plausible.append(job)
+            else:
+                dropped_location += 1
         log.add(
             "filter",
-            f"{len(plausible)} of {len(discovery.jobs)} postings passed the title pre-filter.",
+            (
+                f"{len(title_ok)} of {len(discovery.jobs)} postings passed the title pre-filter "
+                f"(AI Engineer / Forward Deployed). "
+                f"{len(plausible)} also passed the location filter "
+                f"({profile.location_mode}); dropped {dropped_location} on location."
+            ),
         )
 
         fresh: list[Job] = []

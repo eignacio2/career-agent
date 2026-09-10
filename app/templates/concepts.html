@@ -15,7 +15,9 @@
     <dt>SourceJob → Job → scored Job</dt>
     <dd>A board returns a SourceJob. Inserting it assigns an id and makes it a Job. Scoring writes score fields onto that same row. There is no separate “Match” table — the score lives on the job because a job has one candidate.</dd>
     <dt>Title pre-filter before scoring</dt>
-    <dd>Boards return keyword soup. Matching the body is how “Office Assistant — AI Lab Admin” looked like an agents role. The allowlist is title-only, so rejected postings never pay a scoring pass.</dd>
+    <dd>Boards return keyword soup. Matching the body is how “Office Assistant — AI Lab Admin” looked like an agents role. The allowlist is title-only and currently keeps AI Engineer and Forward Deployed Engineer — data-science titles never pay a scoring pass.</dd>
+    <dt>Location pre-filter</dt>
+    <dd>A London on-site Machine Learning Engineer is a real posting and would otherwise score well enough to distract. <code>location_mode=us-or-remote</code> drops it before insert. Remote stays. Target-cities-only is the stricter option.</dd>
     <dt>allSettled, not all</dt>
     <dd>If Arbeitnow times out, Remotive and the new-grad board still count. Empty live results fall back to the sample board so the rest of the pipeline is always testable.</dd>
     <dt>Caps, not penalties</dt>

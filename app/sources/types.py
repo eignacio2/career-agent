@@ -74,14 +74,23 @@ def find_apply_email(text: str) -> str | None:
     return lowered
 
 
-def fetch_json(url: str, timeout_s: float = 12.0) -> Any | None:
+def fetch_json(
+    url: str,
+    timeout_s: float = 12.0,
+    params: dict[str, Any] | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> Any | None:
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": USER_AGENT,
+    }
+    if extra_headers:
+        headers.update(extra_headers)
     try:
         response = httpx.get(
             url,
-            headers={
-                "Accept": "application/json",
-                "User-Agent": USER_AGENT,
-            },
+            headers=headers,
+            params=params,
             timeout=timeout_s,
             follow_redirects=True,
         )
@@ -95,3 +104,16 @@ def fetch_json(url: str, timeout_s: float = 12.0) -> Any | None:
 def partial_match(haystack: str, needle: str) -> bool:
     words = [word for word in needle.split() if len(word) > 3]
     return len(words) > 1 and all(word in haystack for word in words)
+
+
+def matches_query(title: str, queries: list[str]) -> bool:
+    lowered = title.lower()
+    for query in queries:
+        needle = query.lower().strip()
+        if not needle:
+            continue
+        if needle in lowered:
+            return True
+        if partial_match(lowered, needle):
+            return True
+    return False

@@ -21,4 +21,4 @@ def test_offline_run_via_http(tmp_db):
     assert b"Queued" in home.content
     jobs = client.get("/jobs?status=queued")
     assert jobs.status_code == 200
-    assert b"Data Scientist I" in jobs.content
+    assert b"Associate AI Engineer" in jobs.content or b"Forward Deployed" in jobs.content

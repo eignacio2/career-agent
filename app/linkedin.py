@@ -67,10 +67,15 @@ def _diff(snapshot: LinkedInSnapshot, pack: LinkedInPack, profile: Profile, resu
     headline = snapshot.headline.strip()
     lowered = headline.lower()
     problems = [why for phrase, why in WEAK_HEADLINE if phrase in lowered]
-    mentions_target = any(word in lowered for word in ("ai", "ml", "machine learning", "data", "analytics", "llm"))
+    mentions_target = any(
+        word in lowered
+        for word in ("ai", "ml", "machine learning", "llm", "forward deployed", "fde")
+    )
     if headline and (problems or not mentions_target):
         if not mentions_target:
-            problems.append("The headline never says AI, ML, or data, so you miss recruiter searches for those roles.")
+            problems.append(
+                "The headline never says AI, ML, or forward deployed, so you miss recruiter searches for those roles."
+            )
         changes.append(
             LinkedInChange(
                 field="Headline",

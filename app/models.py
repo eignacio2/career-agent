@@ -15,7 +15,8 @@ from pydantic import BaseModel, Field
 
 RemotePreference = Literal["remote", "hybrid", "onsite", "any"]
 ExperienceLevel = Literal["new-grad", "early-career", "mid", "senior"]
-JobRole = Literal["data-science", "ai-engineering", "adjacent"]
+JobRole = Literal["data-science", "ai-engineering", "forward-deployed", "adjacent"]
+LocationMode = Literal["any", "us-or-remote", "targets-or-remote"]
 JobStatus = Literal["new", "shortlisted", "queued", "applied", "skipped", "expired"]
 RunStatus = Literal["running", "success", "failed"]
 LogLevel = Literal["info", "warn", "error"]
@@ -94,6 +95,7 @@ class Profile(BaseModel):
     target_titles: list[str] = Field(default_factory=list)
     target_locations: list[str] = Field(default_factory=list)
     remote_preference: RemotePreference = "any"
+    location_mode: LocationMode = "us-or-remote"
     min_salary: int | None = None
     excluded_companies: list[str] = Field(default_factory=list)
     required_keywords: list[str] = Field(default_factory=list)

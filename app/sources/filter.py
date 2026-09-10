@@ -1,11 +1,4 @@
-"""Title-only pre-filter.
-
-Classification runs on the job title, never the body. A customer-support
-posting says "agent" and "prompt"; a Rails posting mentions "inference" in
-passing. Matching the description is how the TypeScript v1 pulled in an
-Office Assistant. Title-only is stricter and cheaper: rejected postings
-never reach the scorer.
-"""
+"""Title-only pre-filter for AI engineering and forward deployed roles."""
 
 from __future__ import annotations
 
@@ -26,10 +19,22 @@ AI_ENGINEERING_TITLES = [
     re.compile(r"\bdeep\s+learning\b", re.I),
     re.compile(r"\bprompt\s+engineer\b", re.I),
     re.compile(r"\bresearch\s+engineer\b", re.I),
+    re.compile(r"\bapplied\s+ai\b", re.I),
     re.compile(
         r"\b(software|backend|platform)\s+engineer\b.*\b(ml|ai|machine\s+learning|inference|model)\b",
         re.I,
     ),
+]
+
+# Palantir-style embedding: software engineer sitting with the customer.
+FORWARD_DEPLOYED_TITLES = [
+    re.compile(r"\bforward[\s-]*deployed\b", re.I),
+    re.compile(r"\bfde\b", re.I),
+    re.compile(r"\bdeployment engineer\b", re.I),
+    re.compile(r"\b(field|implementation)\s+(software\s+)?engineer\b", re.I),
+    re.compile(r"\bcustomer engineer\b", re.I),
+    re.compile(r"\b(technical\s+)?solutions engineer\b", re.I),
+    re.compile(r"\bai\s+deployment\b", re.I),
 ]
 
 DATA_SCIENCE_TITLES = [
@@ -37,13 +42,8 @@ DATA_SCIENCE_TITLES = [
     re.compile(r"\b(applied|research|decision|staff|principal|lead|senior|associate)\s+scientist\b", re.I),
     re.compile(r"\bstatistician\b", re.I),
     re.compile(r"\b(quantitative|quant)\s+(analyst|researcher|developer|scientist)\b", re.I),
-    re.compile(r"\beconometric", re.I),
-    re.compile(r"\bexperimentation\s+(scientist|analyst)\b", re.I),
 ]
 
-# Early-career programmes are often titled in ways the role patterns miss
-# ("University Graduate, Analytics"). Recognising a posting is separate from
-# wanting it: scoring decides that against the candidate's actual level.
 EARLY_CAREER_TITLES = [
     re.compile(r"\b(new\s?grad(uate)?|university\s+grad(uate)?|college\s+grad(uate)?|recent\s+grad(uate)?)\b", re.I),
     re.compile(r"\b(early\s+career|entry[\s-]level|graduate\s+(programme|program|scheme))\b", re.I),
@@ -60,9 +60,7 @@ ADJACENT_TITLES = [
     re.compile(r"\bdata\s+engineer\b", re.I),
     re.compile(r"\banalytics\s+engineer\b", re.I),
     re.compile(r"\bdata\s+analyst\b", re.I),
-    re.compile(r"\bdata\s+architect\b", re.I),
-    re.compile(r"\bbusiness\s+intelligence\b", re.I),
-    re.compile(r"\banalytics\s+(lead|manager)\b", re.I),
+    re.compile(r"\bsoftware\s+engineer\b", re.I),
 ]
 
 HARD_REJECT_TITLES = [
@@ -88,6 +86,9 @@ INTERNSHIP_TITLES = re.compile(
     re.I,
 )
 
+# Only these families are what this search is for.
+TARGET_ROLES = {"ai-engineering", "forward-deployed"}
+
 
 @dataclass(frozen=True)
 class TitleAssessment:
@@ -97,9 +98,15 @@ class TitleAssessment:
     internship: bool
 
 
+def _is_fde(title: str) -> bool:
+    return any(pattern.search(title) for pattern in FORWARD_DEPLOYED_TITLES)
+
+
 def assess_job_title(title: str) -> TitleAssessment | None:
     normalized = title.lower()
-    if any(pattern.search(normalized) for pattern in HARD_REJECT_TITLES):
+    # FDE titles sometimes mention "Customer Success" as the team. That is not
+    # a customer-success IC role, so skip the hard reject when FDE matches.
+    if not _is_fde(normalized) and any(pattern.search(normalized) for pattern in HARD_REJECT_TITLES):
         return None
 
     early_career = any(pattern.search(normalized) for pattern in EARLY_CAREER_TITLES)
@@ -107,7 +114,9 @@ def assess_job_title(title: str) -> TitleAssessment | None:
     internship = bool(INTERNSHIP_TITLES.search(normalized))
 
     role: JobRole | None = None
-    if any(pattern.search(normalized) for pattern in AI_ENGINEERING_TITLES):
+    if _is_fde(normalized):
+        role = "forward-deployed"
+    elif any(pattern.search(normalized) for pattern in AI_ENGINEERING_TITLES):
         role = "ai-engineering"
     elif any(pattern.search(normalized) for pattern in DATA_SCIENCE_TITLES):
         role = "data-science"
@@ -137,4 +146,4 @@ def is_plausible_target(job: SourceJob, include_internships: bool = False) -> bo
         return False
     if assessment.internship and not include_internships:
         return False
-    return True
+    return assessment.role in TARGET_ROLES

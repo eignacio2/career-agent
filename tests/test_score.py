@@ -9,23 +9,40 @@ THRESHOLD = DEFAULT_PROFILE.auto_apply_threshold  # 72
 
 def test_new_grad_role_clears_threshold():
     job = make_job(
-        title="Data Scientist I (New Grad)",
+        title="Associate AI Engineer, University Graduate",
         early_career=True,
-        role_family="data-science",
+        role_family="ai-engineering",
         remote=True,
         location="Remote (US)",
         description=(
-            "This is a role for someone finishing a degree. "
-            "0-2 years of professional experience. "
-            "Solid Python, SQL, pandas, scikit-learn."
+            "University graduate programme. Graduating within the last year. "
+            "Strong Python. LLM API, FastAPI, RAG. No prior industry ML required."
         ),
-        tags=["python", "sql", "pandas"],
-        salary_text="$95,000 - $115,000",
+        tags=["python", "llm", "rag", "fastapi"],
+        salary_text="$105,000 - $125,000",
     )
     match = score_heuristically(job, DEFAULT_PROFILE, DEFAULT_RESUME)
     assert match.score >= THRESHOLD, match
     assert match.verdict in {"Good match", "Strong match", "Worth a look"}
-    # Worth a look is 60-74; threshold is 72. The new-grad DS I should be >= 72.
+    assert match.score >= 72
+
+
+def test_new_grad_fde_clears_threshold():
+    job = make_job(
+        title="Forward Deployed Engineer, New Grad",
+        early_career=True,
+        role_family="forward-deployed",
+        remote=False,
+        location="New York, NY",
+        description=(
+            "Graduating this year. Strong Python. LLM API and customer-facing engineering. "
+            "0-1 years of professional experience."
+        ),
+        tags=["python", "llm", "agents"],
+        salary_text="$120,000 - $145,000",
+    )
+    match = score_heuristically(job, DEFAULT_PROFILE, DEFAULT_RESUME)
+    assert match.score >= THRESHOLD, match
     assert match.score >= 72
 
 

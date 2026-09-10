@@ -1,4 +1,4 @@
-"""Heuristic scoring for data science and AI engineering postings.
+"""Heuristic scoring for AI engineering and forward deployed postings.
 
 No language model in this slice. The TypeScript v1 optionally overlaid an LLM
 score; that overlay was never allowed to override a hard exclusion. Keeping
@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
+from app.geo import foreign_onsite_label, is_remote, matches_target_city
 from app.models import ExperienceLevel, Job, Profile, Resume, ScoredMatch, SourceJob
 from app.sources.filter import assess_job_title
 
@@ -83,23 +84,6 @@ LEVEL_WORDS = {
 }
 
 MAX_LEVEL_POINTS = 22
-
-NON_US_MARKERS = re.compile(
-    r"\b(united kingdom|england|scotland|london|manchester|edinburgh|germany|berlin|"
-    r"munich|stuttgart|hamburg|france|paris|spain|madrid|barcelona|netherlands|"
-    r"amsterdam|ireland|dublin|poland|warsaw|krakow|india|bangalore|bengaluru|"
-    r"hyderabad|mumbai|pune|singapore|australia|sydney|melbourne|canada|toronto|"
-    r"vancouver|montreal|japan|tokyo|brazil|s[aã]o paulo|mexico city|israel|"
-    r"tel aviv|switzerland|zurich|geneva|sweden|stockholm|denmark|copenhagen|"
-    r"italy|milan|rome|portugal|lisbon|porto|romania|bucharest|czech|prague|"
-    r"austria|vienna|belgium|brussels|norway|oslo|finland|helsinki|china|beijing|"
-    r"shanghai|shenzhen|korea|seoul|hong kong|taiwan|taipei|dubai|abu dhabi|"
-    r"u\.?a\.?e\.?|south africa|new zealand|auckland|argentina|chile|colombia|"
-    r"bogot[aá]|philippines|manila|vietnam|hanoi|thailand|bangkok|indonesia|"
-    r"jakarta|malaysia|kuala lumpur|turkey|istanbul|egypt|cairo|nigeria|lagos|"
-    r"kenya|nairobi)\b",
-    re.I,
-)
 
 
 def extract_required_years(description: str) -> int | None:
@@ -279,30 +263,23 @@ def _level_fit(job: Job, profile: Profile) -> tuple[int, str, str | None, int | 
 
 
 def _requires_foreign_authorization(job: Job, profile: Profile) -> str | None:
-    if job.remote:
-        return None
-    if any(NON_US_MARKERS.search(location) for location in profile.target_locations):
-        return None
-    match = NON_US_MARKERS.search(job.location)
-    return match.group(0) if match else None
+    return foreign_onsite_label(job, profile)
 
 
 def _location_fit(job: Job, profile: Profile) -> tuple[int, str]:
-    location = job.location.lower().strip()
     wants_remote = profile.remote_preference == "remote"
 
-    if job.remote or "remote" in location or "anywhere" in location:
+    if is_remote(job):
         if wants_remote or profile.remote_preference == "any":
             return 16, "Remote role, which matches your stated preference."
         return 12, "Remote role."
 
+    location = (job.location or "").lower().strip()
     if not location:
         return 9, "The posting does not state a location, so this needs checking by hand."
 
-    for target in profile.target_locations:
-        city = re.sub(r"\(.*\)", "", _normalize(target).split(",")[0]).strip()
-        if len(city) > 2 and city != "remote" and city in location:
-            return 13, f"Located in a target market ({target})."
+    if matches_target_city(job, profile):
+        return 13, f"Located in a target market ({job.location})."
 
     if wants_remote:
         return 2, f"On-site in {job.location}, but you are looking for remote work."
@@ -419,7 +396,7 @@ def score_heuristically(job: Job, profile: Profile, resume: Resume) -> ScoredMat
             f"This role is on-site in {job.location}, outside the countries you are targeting."
         )
     if job.role_family == "adjacent":
-        gaps.append("Reads as adjacent work rather than a data science or AI engineering role.")
+        gaps.append("Reads as adjacent work rather than an AI engineering or forward deployed role.")
 
     return ScoredMatch(score=score, verdict=_verdict_for(score), reasons=reasons, gaps=gaps)
 

@@ -22,13 +22,13 @@ DEFAULT_PROFILE = Profile(
     email="ethignacio25@gmail.com",
     phone="630-524-8692",
     location="Chicago, IL",
-    headline="New-grad CS · AI engineering (agents, n8n, Gemini) · seeking data science and AI engineering roles",
+    headline="New-grad CS · AI Engineer / Forward Deployed Engineer (agents, n8n, Gemini)",
     summary=(
         "Computer science student at UIC (expected May 2026) targeting new-grad "
-        "data science and AI engineering roles. Strongest demonstrated work is "
-        "AI agent engineering (Wayfair externship: n8n + Gemini). Classic data "
-        "science depth (pandas, scikit-learn, experimentation) is still thin — "
-        "score postings honestly against that, do not invent it."
+        "AI engineering and forward deployed engineering roles. Strongest demonstrated "
+        "work is AI agent engineering (Wayfair externship: n8n + Gemini) — wiring LLM "
+        "tools into real workflows with a customer-adjacent constraint. Not a classic "
+        "data science hire (pandas/scikit-learn/experimentation are thin); do not invent that."
     ),
     linkedin_url="https://www.linkedin.com/in/ethan-ignacio/",
     github_url="https://github.com/eignacio2",
@@ -55,17 +55,30 @@ DEFAULT_PROFILE = Profile(
     ],
     target_titles=[
         "AI Engineer",
+        "Associate AI Engineer",
+        "Junior AI Engineer",
+        "Forward Deployed Engineer",
+        "Forward Deployed Software Engineer",
+        "Forward Deployed AI Engineer",
         "Machine Learning Engineer",
-        "Data Scientist",
-        "Data Scientist I",
-        "Associate Data Scientist",
-        "Junior Data Scientist",
-        "ML Engineer",
-        "New Grad Data Scientist",
-        "New Grad Machine Learning Engineer",
+        "Applied AI Engineer",
+        "New Grad AI Engineer",
+        "Customer Engineer",
     ],
-    target_locations=["Remote (US)", "Chicago, IL", "New York, NY", "Seattle, WA"],
+    target_locations=[
+        "Remote (US)",
+        "Chicago, IL",
+        "New York, NY",
+        "San Francisco, CA",
+        "Palo Alto, CA",
+        "Seattle, WA",
+        "Washington, DC",
+        "Austin, TX",
+        "Boston, MA",
+        "Denver, CO",
+    ],
     remote_preference="any",
+    location_mode="us-or-remote",
     min_salary=85000,
     excluded_companies=[],
     required_keywords=[],
@@ -79,7 +92,7 @@ DEFAULT_PROFILE = Profile(
 DEFAULT_RESUME = Resume(
     basics=ResumeBasics(
         name="Ethan Ignacio",
-        title="New-grad CS · AI Engineer / Data Scientist",
+        title="New-grad CS · AI Engineer / Forward Deployed Engineer",
         email="ethignacio25@gmail.com",
         phone="630-524-8692",
         location="Chicago, IL · Open to remote",
@@ -90,8 +103,8 @@ DEFAULT_RESUME = Resume(
         summary=(
             "UIC computer science student (May 2026) with an AI Agent Engineering "
             "externship at Wayfair. Looking for a first full-time AI engineering "
-            "or data science role. Comfortable wiring LLM tools into real workflows; "
-            "not yet a production ML or experimentation hire."
+            "or forward deployed engineering role. Comfortable wiring LLM tools into "
+            "real workflows; not yet a production ML or experimentation hire."
         ),
     ),
     skill_groups=[
@@ -135,7 +148,7 @@ DEFAULT_RESUME = Resume(
             degree="B.S. Computer Science",
             start="2022",
             end="2026",
-            detail="Expected May 2026. Coursework in software engineering and AI; targeting new-grad data science and AI engineering roles.",
+            detail="Expected May 2026. Targeting new-grad AI engineering and forward deployed engineering roles.",
         ),
     ],
     certifications=["AWS Certified Cloud Practitioner"],

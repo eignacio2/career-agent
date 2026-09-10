@@ -5,11 +5,11 @@ def test_cli_offline_run_and_queued(tmp_db, capsys):
     assert main(["run", "--offline"]) == 0
     out = capsys.readouterr().out
     assert "Run " in out
-    assert "Data Scientist I" in out or "queued" in out.lower()
+    assert "Associate AI Engineer" in out or "Forward Deployed" in out or "queued" in out.lower()
 
     assert main(["queued"]) == 0
     queued = capsys.readouterr().out
-    assert "Data Scientist I" in queued
+    assert "Associate AI Engineer" in queued or "Forward Deployed" in queued
 
     assert main(["status"]) == 0
     assert main(["digest"]) == 0

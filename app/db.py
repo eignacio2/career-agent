@@ -171,6 +171,7 @@ def _migrate(conn: sqlite3.Connection) -> None:
     )
     conn.commit()
     _seed_if_empty(conn)
+    _refresh_stale_search_defaults(conn)
 
 
 def _seed_if_empty(conn: sqlite3.Connection) -> None:
@@ -187,6 +188,34 @@ def _seed_if_empty(conn: sqlite3.Connection) -> None:
             (DEFAULT_RESUME.model_dump_json(), now_iso()),
         )
     conn.commit()
+
+
+def _refresh_stale_search_defaults(conn: sqlite3.Connection) -> None:
+    """Move a still-seeded DS search onto AI Engineer / FDE without clobbering custom titles."""
+    row = conn.execute("SELECT data FROM profile WHERE id = 1").fetchone()
+    if row is None:
+        return
+    data = json.loads(row["data"])
+    titles = [str(item).lower() for item in data.get("target_titles") or []]
+    looking_ds = any("data scientist" in item or item.strip() == "data science" for item in titles)
+    looking_fde = any("forward deployed" in item for item in titles)
+    changed = False
+    if looking_ds and not looking_fde:
+        data["target_titles"] = DEFAULT_PROFILE.target_titles
+        data["headline"] = DEFAULT_PROFILE.headline
+        data["summary"] = DEFAULT_PROFILE.summary
+        data["target_locations"] = DEFAULT_PROFILE.target_locations
+        data["location_mode"] = DEFAULT_PROFILE.location_mode
+        changed = True
+    elif not data.get("location_mode"):
+        data["location_mode"] = DEFAULT_PROFILE.location_mode
+        changed = True
+    if changed:
+        conn.execute(
+            "UPDATE profile SET data = ?, updated_at = ? WHERE id = 1",
+            (json.dumps(data), now_iso()),
+        )
+        conn.commit()
 
 
 def get_profile() -> Profile:

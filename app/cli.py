@@ -191,7 +191,7 @@ def cmd_send(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m app",
-        description="New-grad data science / AI engineering job-search agent.",
+        description="New-grad AI engineering / forward deployed engineering job-search agent.",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 

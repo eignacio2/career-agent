@@ -51,6 +51,13 @@
         {% endfor %}
       </select>
     </label>
+    <label>Location filter
+      <select name="location_mode">
+        <option value="us-or-remote" {% if profile.location_mode == 'us-or-remote' %}selected{% endif %}>US on-site or remote (drop foreign on-site)</option>
+        <option value="targets-or-remote" {% if profile.location_mode == 'targets-or-remote' %}selected{% endif %}>Target cities or remote only</option>
+        <option value="any" {% if profile.location_mode == 'any' %}selected{% endif %}>No hard filter (score only)</option>
+      </select>
+    </label>
     <label class="check full">
       <input type="checkbox" name="include_internships" {% if profile.include_internships %}checked{% endif %}>
       Include internships and co-ops in the title filter
