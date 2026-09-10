@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Jobs · Career Agent{% endblock %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <p class="kicker">Inbox</p>
+    <h1>Scored postings</h1>
+    <p class="lede">Queued means “crosses your threshold — go apply.” Skipped is kept so you can audit the cap logic, not so you apply anyway.</p>
+  </div>
+</header>
+
+<nav class="filters">
+  {% for key, label in [('all','All'),('queued','Queued'),('shortlisted','Shortlisted'),('skipped','Skipped'),('new','Unscored')] %}
+  <a href="/jobs{% if key != 'all' %}?status={{ key }}{% endif %}" class="{% if filter_status == key %}active{% endif %}">{{ label }}</a>
+  {% endfor %}
+</nav>
+
+{% if jobs %}
+<table class="jobs">
+  <thead>
+    <tr><th>Score</th><th>Role</th><th>Family</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    {% for job in jobs %}
+    <tr>
+      <td class="score">{{ job.score if job.score is not none else "—" }}</td>
+      <td>
+        <a href="/jobs/{{ job.id }}">{{ job.title }}</a>
+        <div class="muted">{{ job.company }} · {{ job.location }}{% if job.remote %} · remote{% endif %}</div>
+      </td>
+      <td class="muted">{{ job.role_family }}</td>
+      <td><span class="pill {{ job.status }}">{{ job.status }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<section class="panel empty">
+  <h2>No jobs in this view</h2>
+  <p>Run the agent from the dashboard. If live boards fail, the sample board still produces a full scored set.</p>
+</section>
+{% endif %}
+{% endblock %}

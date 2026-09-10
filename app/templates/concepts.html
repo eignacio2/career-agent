@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}How it works · Career Agent{% endblock %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <p class="kicker">Concept ledger</p>
+    <h1>Why each layer exists</h1>
+    <p class="lede">The TypeScript v1 did too many jobs at once. This rewrite is the same pipeline, cut down to the part that has to be correct: find roles, decide if they are even in-family, score them honestly for a new graduate.</p>
+  </div>
+</header>
+
+<section class="panel">
+  <h2>You already own</h2>
+  <dl class="ledger">
+    <dt>SourceJob → Job → scored Job</dt>
+    <dd>A board returns a SourceJob. Inserting it assigns an id and makes it a Job. Scoring writes score fields onto that same row. There is no separate “Match” table — the score lives on the job because a job has one candidate.</dd>
+    <dt>Title pre-filter before scoring</dt>
+    <dd>Boards return keyword soup. Matching the body is how “Office Assistant — AI Lab Admin” looked like an agents role. The allowlist is title-only, so rejected postings never pay a scoring pass.</dd>
+    <dt>allSettled, not all</dt>
+    <dd>If Arbeitnow times out, Remotive and the new-grad board still count. Empty live results fall back to the sample board so the rest of the pipeline is always testable.</dd>
+    <dt>Caps, not penalties</dt>
+    <dd>A −20 penalty on a 90 still clears a 72 queue threshold. A cap of 45 cannot. Years over-reach, staff titles, and foreign on-site work use caps because they are screen-outs, not “a bit worse.”</dd>
+    <dt>Two-write gap (fixed here)</dt>
+    <dd>v1 wrote application status and job status in two statements. A crash between them desynced the tables. This slice scores and updates status in one SQLite transaction.</dd>
+  </dl>
+</section>
+
+<section class="panel">
+  <h2>This slice is teaching</h2>
+  <dl class="ledger">
+    <dt>Test pyramid</dt>
+    <dd>Years extraction and caps are unit tests with no I/O. The title filter is unit tests. One pipeline test hits SQLite with the sample board. There is no Selenium suite — the expensive tests would not catch a cap bug faster than <code>test_score.py</code>.</dd>
+    <dt>Parse vs validate</dt>
+    <dd>httpx returns JSON as dicts (parse). Pydantic <code>SourceJob</code> / <code>Profile</code> reject malformed records (validate). Mixing those — treating a dict as a Job — is how silent None scores happen.</dd>
+    <dt>Transactions as a unit of work</dt>
+    <dd><code>record_score</code> is the unit: score + verdict + status + decided_at. If that commit fails, the job stays <code>new</code> and the next run will score it again.</dd>
+  </dl>
+</section>
+
+<section class="panel">
+  <h2>Not in this slice — on purpose</h2>
+  <ul>
+    <li>Resume tailoring and cover letters</li>
+    <li>Sending applications by email</li>
+    <li>PDF / LinkedIn import</li>
+    <li>Daily digest SMTP</li>
+    <li>LLM overlay on the heuristic score</li>
+    <li>Autopilot</li>
+  </ul>
+  <p>Each of those is a new failure mode (prompt injection from job descriptions, ToS on ATS forms, SMTP credentials). They come back after this core is something you can debug.</p>
+</section>
+
+<section class="panel">
+  <h2>Ahead</h2>
+  <ul>
+    <li>Auth on the HTML routes (only the cron route is gated today)</li>
+    <li>Cross-process run locking (today: in-process threading lock + a DB flag)</li>
+    <li>Schema migrations as a real tool, not <code>CREATE TABLE IF NOT EXISTS</code></li>
+    <li>Observability: structured logs, run duration, source latency</li>
+    <li>Deploy: this process holds SQLite. It is not a Vercel function.</li>
+  </ul>
+</section>
+{% endblock %}

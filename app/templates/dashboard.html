@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Career Agent{% endblock %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <p class="kicker">Pipeline</p>
+    <h1>Discover, score, queue. You submit.</h1>
+    <p class="lede">This slice finds data science and AI engineering roles, scores them against your new-grad profile, and queues anything that clears {{ profile.auto_apply_threshold }}. It does not email applications or rewrite your resume.</p>
+  </div>
+  <form method="post" action="/runs" class="run-form">
+    <label class="check">
+      <input type="checkbox" name="offline" value="on">
+      Use sample board only
+    </label>
+    <button type="submit">Run agent</button>
+  </form>
+</header>
+
+{% if error %}
+<p class="banner error">{{ error }}</p>
+{% endif %}
+{% if request.query_params.get('ran') %}
+<p class="banner">Run {{ request.query_params.get('ran') }} finished. Queued jobs are ready to apply to by hand.</p>
+{% endif %}
+
+<section class="stats">
+  <article><span class="stat-label">Seen</span><strong>{{ counts.total or 0 }}</strong></article>
+  <article><span class="stat-label">Queued</span><strong>{{ counts.queued or 0 }}</strong></article>
+  <article><span class="stat-label">Shortlisted</span><strong>{{ counts.shortlisted or 0 }}</strong></article>
+  <article><span class="stat-label">Skipped</span><strong>{{ counts.skipped or 0 }}</strong></article>
+</section>
+
+{% if latest_run %}
+<section class="panel">
+  <h2>Last run</h2>
+  <p class="muted">{{ latest_run.trigger }} · {{ latest_run.status }} · {{ latest_run.started_at }}</p>
+  <p>Discovered {{ latest_run.stats.discovered }}, scored {{ latest_run.stats.scored }}, queued {{ latest_run.stats.queued }}, top score {{ latest_run.stats.top_score }}.</p>
+  <ol class="log">
+    {% for entry in latest_run.log %}
+    <li class="{{ entry.level }}"><span class="step">{{ entry.step }}</span> {{ entry.message }}</li>
+    {% endfor %}
+  </ol>
+</section>
+{% else %}
+<section class="panel empty">
+  <h2>No runs yet</h2>
+  <p>Start with the sample board so you can see scoring without depending on live job APIs. Then run again with the box unchecked to hit the New Grad Positions board, Remotive, and Arbeitnow.</p>
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Top scored</h2>
+    <a href="/jobs">All jobs</a>
+  </div>
+  {% if jobs %}
+  <table class="jobs">
+    <thead>
+      <tr><th>Score</th><th>Role</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td class="score score-{{ job.score_verdict|replace(' ', '-')|lower if job.score_verdict else 'none' }}">{{ job.score if job.score is not none else "—" }}</td>
+        <td>
+          <a href="/jobs/{{ job.id }}">{{ job.title }}</a>
+          <div class="muted">{{ job.company }} · {{ job.location }}</div>
+        </td>
+        <td><span class="pill {{ job.status }}">{{ job.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Nothing stored yet. Run the agent.</p>
+  {% endif %}
+</section>
+{% endblock %}

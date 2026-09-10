@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Career Agent{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="nav">
+      <p class="brand">Career Agent</p>
+      <p class="brand-sub">New-grad DS / AI eng</p>
+      <nav>
+        <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
+        <a href="/jobs" class="{% if request.url.path.startswith('/jobs') %}active{% endif %}">Jobs{% if counts.total %} <span class="count">{{ counts.total }}</span>{% endif %}</a>
+        <a href="/settings" class="{% if request.url.path == '/settings' %}active{% endif %}">Profile</a>
+        <a href="/concepts" class="{% if request.url.path == '/concepts' %}active{% endif %}">How it works</a>
+      </nav>
+      <div class="nav-meta">
+        <p>{{ profile.full_name }}</p>
+        <p class="muted">{{ profile.experience_level }} · ceiling {{ profile.max_years_required }} yrs</p>
+      </div>
+    </aside>
+    <main class="main">
+      {% block body %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

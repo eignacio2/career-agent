@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ job.title }} · Career Agent{% endblock %}
+{% block body %}
+<p class="crumb"><a href="/jobs">Jobs</a> / {{ job.company }}</p>
+<header class="page-head">
+  <div>
+    <p class="kicker">{{ job.source }} · {{ job.role_family }}</p>
+    <h1>{{ job.title }}</h1>
+    <p class="lede">{{ job.company }} · {{ job.location }}{% if job.remote %} · remote{% endif %}</p>
+  </div>
+  <div class="score-hero">
+    <strong>{{ job.score if job.score is not none else "—" }}</strong>
+    <span>{{ job.score_verdict or "Unscored" }}</span>
+    <span class="pill {{ job.status }}">{{ job.status }}</span>
+  </div>
+</header>
+
+<p><a class="button" href="{{ job.url }}" rel="noopener" target="_blank">Open posting</a></p>
+
+<section class="split">
+  <article class="panel">
+    <h2>Why this score</h2>
+    {% if job.score_reasons %}
+    <ul>
+      {% for reason in job.score_reasons %}
+      <li>{{ reason }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">Not scored yet.</p>
+    {% endif %}
+  </article>
+  <article class="panel">
+    <h2>Gaps</h2>
+    {% if job.score_gaps %}
+    <ul>
+      {% for gap in job.score_gaps %}
+      <li>{{ gap }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No gaps recorded.</p>
+    {% endif %}
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Posting</h2>
+  {% if job.salary_text %}<p class="muted">{{ job.salary_text }}</p>{% endif %}
+  {% if job.tags %}<p class="muted">{{ job.tags | join(" · ") }}</p>{% endif %}
+  {% if job.apply_email %}<p>Apply email found: <code>{{ job.apply_email }}</code> — this slice does not send it.</p>{% endif %}
+  <pre class="description">{{ job.description or "The New Grad Positions board does not include a description. Score is title, tags, location, and the early-career flag." }}</pre>
+</section>
+{% endblock %}

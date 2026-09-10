@@ -1,0 +1,22 @@
+[project]
+name = "career-agent"
+version = "0.2.0"
+description = "Personal job-search agent for new-grad data science and AI engineering roles."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "jinja2>=3.1.4",
+  "httpx>=0.27.0",
+  "pydantic>=2.9.0",
+  "python-multipart>=0.0.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

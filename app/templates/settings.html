@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Profile · Career Agent{% endblock %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <p class="kicker">Scoring input</p>
+    <h1>What the agent believes about you</h1>
+    <p class="lede">Wrong skills or the wrong experience ceiling will quietly send every posting to skipped. This form is the contract the scorer reads — not a public resume.</p>
+  </div>
+</header>
+
+{% if request.query_params.get('saved') %}
+<p class="banner">Profile saved. Re-run the agent to rescore new postings; already-scored rows keep their old scores until they are discovered again as new source IDs.</p>
+{% endif %}
+
+<form method="post" action="/settings" class="form">
+  <fieldset>
+    <legend>Identity</legend>
+    <label>Full name <input name="full_name" value="{{ profile.full_name }}" required></label>
+    <label>Email <input name="email" type="email" value="{{ profile.email }}" required></label>
+    <label>Phone <input name="phone" value="{{ profile.phone }}"></label>
+    <label>Location <input name="location" value="{{ profile.location }}"></label>
+    <label>Headline <input name="headline" value="{{ profile.headline }}"></label>
+    <label>LinkedIn <input name="linkedin_url" value="{{ profile.linkedin_url }}"></label>
+    <label>GitHub <input name="github_url" value="{{ profile.github_url }}"></label>
+    <label class="full">Summary <textarea name="summary" rows="4">{{ profile.summary }}</textarea></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Level — this drives the caps</legend>
+    <label>Experience level
+      <select name="experience_level">
+        {% for level in ['new-grad', 'early-career', 'mid', 'senior'] %}
+        <option value="{{ level }}" {% if profile.experience_level == level %}selected{% endif %}>{{ level }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Max years a posting may require
+      <input name="max_years_required" type="number" min="0" max="30" value="{{ profile.max_years_required if profile.max_years_required is not none else '' }}">
+    </label>
+    <label>Queue threshold
+      <input name="auto_apply_threshold" type="number" min="0" max="100" value="{{ profile.auto_apply_threshold }}">
+    </label>
+    <label>Minimum salary
+      <input name="min_salary" type="number" min="0" value="{{ profile.min_salary or '' }}">
+    </label>
+    <label>Remote preference
+      <select name="remote_preference">
+        {% for pref in ['any', 'remote', 'hybrid', 'onsite'] %}
+        <option value="{{ pref }}" {% if profile.remote_preference == pref %}selected{% endif %}>{{ pref }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="check full">
+      <input type="checkbox" name="include_internships" {% if profile.include_internships %}checked{% endif %}>
+      Include internships and co-ops in the title filter
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Search (comma-separated)</legend>
+    <label class="full">Target titles <input name="target_titles" value="{{ profile.target_titles | join(', ') }}"></label>
+    <label class="full">Skills you actually have <input name="skills" value="{{ profile.skills | join(', ') }}"></label>
+    <label class="full">Target locations <input name="target_locations" value="{{ profile.target_locations | join(', ') }}"></label>
+    <label class="full">Excluded companies <input name="excluded_companies" value="{{ profile.excluded_companies | join(', ') }}"></label>
+    <label class="full">Excluded keywords <input name="excluded_keywords" value="{{ profile.excluded_keywords | join(', ') }}"></label>
+  </fieldset>
+
+  <button type="submit">Save profile</button>
+</form>
+{% endblock %}
