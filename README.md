@@ -10,27 +10,25 @@ It discovers postings, drops anything that is not in-family from the title, scor
 - Tailors a markdown resume and cover letter by reordering existing bullets (never invents employers or metrics); emails applications when a posting lists an address, otherwise queues an ATS pack for manual submit.
 - Writes a daily digest and a field-by-field LinkedIn update pack (headline/About/skills). LinkedIn is copy-paste; there is no unofficial write API.
 
-## Run it (this is the interview demo)
+## Run it
+
+Live boards first. `--offline` is only for tests and for explaining caps with known fixtures.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-python3 -m app run --offline    # sample board, no network
-python3 -m app queued           # what to apply to
-python3 -m app applications    # tailored packs on disk
-python3 -m app digest           # today's digest
-python3 -m app linkedin         # copy-paste pack
+python3 -m app run              # New Grad Positions, Remotive, Arbeitnow
+python3 -m app queued           # real postings that cleared 72
+python3 -m app applications
+python3 -m app digest
+python3 -m app linkedin
 python3 -m app status
 pytest
 ```
 
-Live boards (New Grad Positions, Remotive, Arbeitnow):
-
-```bash
-python -m app run
-```
+If every live board is down, the same command falls back to the sample board. Force that with `python3 -m app run --offline`.
 
 Daily cron (no web server required):
 

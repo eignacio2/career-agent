@@ -223,18 +223,13 @@ def _level_fit(job: Job, profile: Profile) -> tuple[int, str, str | None, int | 
         )
 
     cap: int | None = None
-    if (
-        job.early_career
-        or (assessment and assessment.early_career)
-        or any(signal in title for signal in JUNIOR_SIGNALS)
-    ):
-        points = MAX_LEVEL_POINTS if is_early else 3
-        note = (
-            "Explicitly an early-career or new-grad opening, which is exactly the right level."
-            if is_early
-            else f"Scoped below {profile.years_experience} years of experience."
-        )
-    elif any(signal in title for signal in SENIOR_SIGNALS):
+    senior_title = any(signal in title for signal in SENIOR_SIGNALS)
+    junior_title = (assessment and assessment.early_career) or any(
+        signal in title for signal in JUNIOR_SIGNALS
+    )
+    # The new-grad board marks every listing early_career, including the occasional
+    # "Senior …" that slipped onto the feed. Title seniority wins over that flag.
+    if senior_title:
         points = 2 if is_early else 20
         note = (
             f"Titled as a senior role, which is not a realistic application for {label}."
@@ -243,6 +238,13 @@ def _level_fit(job: Job, profile: Profile) -> tuple[int, str, str | None, int | 
         )
         if is_early:
             cap = 45
+    elif job.early_career or junior_title:
+        points = MAX_LEVEL_POINTS if is_early else 3
+        note = (
+            "Explicitly an early-career or new-grad opening, which is exactly the right level."
+            if is_early
+            else f"Scoped below {profile.years_experience} years of experience."
+        )
     else:
         points = 13 if is_early else 16
         note = (

@@ -2,14 +2,25 @@
 
 Do not open `app/main.py` or the HTML templates unless they ask about the viewer.
 
-## 1. Run it (2 min)
+**The night before (or that morning):** run live so SQLite already holds real postings. Do not depend on a network fetch during a 15-minute screen.
 
 ```bash
-python3 -m app run --offline
+python3 -m app run
 python3 -m app queued
 ```
 
-Say: sample board is mixed on purpose. New-grad DS I queues. Senior 5+ years does not. Office assistant never appears because the title filter dropped it before scoring.
+You should see real companies (HPE, TikTok, Citadel, …), not Harborview / Rivermark. Those sample names only appear with `--offline`.
+
+## 1. Show the output (2 min)
+
+```bash
+python3 -m app queued
+python3 -m app digest
+```
+
+Say: these came from the New Grad Positions board plus Remotive/Arbeitnow. Title filter dropped sales/admin noise. Anything still queued cleared 72. ATS links are in the list; the agent does not submit the form.
+
+`--offline` is the **test fixture**, not the demo. Use it only if they ask “how do you test without the network?” — then run `pytest` and, if you want, `python3 -m app run --offline` to show a Senior 5+ years role getting capped.
 
 ## 2. Pipeline (3 min) — `app/pipeline.py`
 

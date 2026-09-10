@@ -74,6 +74,22 @@ def test_staff_title_is_capped_hard():
     assert match.score < THRESHOLD
 
 
+def test_senior_title_overrides_new_grad_board_flag():
+    """SimplifyJobs tags every listing early-career; a Senior title must still cap."""
+    job = make_job(
+        title="Senior Machine Learning Engineer - Systems - Embodied AI/Npcs",
+        role_family="ai-engineering",
+        early_career=True,
+        remote=True,
+        description="Ship embodied AI systems.",
+        tags=["python", "ml"],
+    )
+    match = score_heuristically(job, DEFAULT_PROFILE, DEFAULT_RESUME)
+    assert match.score < THRESHOLD, match
+    assert match.score <= 45
+    assert "senior" in match.reasons[0].lower()
+
+
 def test_foreign_onsite_is_capped_at_50():
     job = make_job(
         title="Machine Learning Engineer",
