@@ -12,7 +12,7 @@ import re
 from app.models import Job, Profile, SourceJob
 
 NON_US_MARKERS = re.compile(
-    r"\b(united kingdom|england|scotland|london|manchester|edinburgh|germany|berlin|"
+    r"\b(united kingdom|u\.k\.|uk|england|scotland|london|manchester|edinburgh|germany|berlin|"
     r"munich|stuttgart|hamburg|france|paris|spain|madrid|barcelona|netherlands|"
     r"amsterdam|ireland|dublin|poland|warsaw|krakow|india|bangalore|bengaluru|"
     r"hyderabad|mumbai|pune|singapore|australia|sydney|melbourne|canada|toronto|"
@@ -68,17 +68,27 @@ def location_allowed(job: Job | SourceJob, profile: Profile) -> tuple[bool, str]
     if mode == "any":
         return True, "Location filter off."
 
+    haystack = f"{job.title} {job.location or ''}"
+    us_hint = bool(US_HINTS.search(haystack))
+    foreign = NON_US_MARKERS.search(haystack)
+
     if is_remote(job):
+        if foreign and not us_hint:
+            return False, (
+                f"Remote, but the posting is tied to {foreign.group(0)} "
+                "rather than a US search."
+            )
         return True, "Remote."
 
     location = (job.location or "").strip()
     if not location:
         if mode == "targets-or-remote":
             return False, "No location stated, and the search is restricted to target cities or remote."
+        if foreign and not us_hint:
+            return False, f"Title points at {foreign.group(0)}, outside your US search."
         return True, "Location unstated."
 
-    foreign = foreign_onsite_label(job, profile)
-    if foreign:
+    if foreign and not us_hint:
         return False, f"On-site in {job.location} (needs work authorization you may not hold)."
 
     if mode == "us-or-remote":

@@ -58,7 +58,7 @@ Boards that need a key or that 401 without login (Hugging Face jobs, most ATS se
 
 Scoring still awards location points. There is now also a **hard pre-filter** on `profile.location_mode`:
 
-- `us-or-remote` (default) — keep US on-site and anything remote; drop London/Stuttgart/etc. on-site
+- `us-or-remote` (default) — keep US on-site and US/unspecified remote; drop London/Stuttgart/Tokyo/UK-restricted postings even when they say remote
 - `targets-or-remote` — remote, or a city listed in `target_locations`
 - `any` — old behavior: score only, no drop
 

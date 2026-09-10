@@ -50,4 +50,4 @@ Greenhouse/Lever/Workday/Easy Apply are not filled in. LinkedIn is a copy-paste 
 
 - **Why SQLite?** One candidate, one machine, no ops. WAL + a transaction for score+status.
 - **Why no LLM?** Every number in scoring is deterministic and tested. An LLM overlay that cannot override `Excluded` or raise a cap is a later addition, not the core.
-- **Work authorization?** On-site London/Stuttgart is **dropped** under `location_mode=us-or-remote` (default). If you turn the filter to `any`, those roles are still capped at 50. Remote is kept.
+- **Work authorization?** On-site London/Stuttgart is **dropped** under `location_mode=us-or-remote` (default), and so is remote that is clearly tied to a foreign hub (Tokyo in the title, Jobicy `UK`). If you turn the filter to `any`, those roles are still capped at 50 when they are on-site. Unspecified US remote is kept.
