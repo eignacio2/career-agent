@@ -124,3 +124,17 @@ def test_mid_level_candidate_is_not_capped_on_five_years():
     )
     match = score_heuristically(job, profile, DEFAULT_RESUME)
     assert match.score > 45
+
+
+def test_short_skill_r_does_not_match_route():
+    from app.scoring.score import extract_job_skills
+
+    job = make_job(
+        title="Junior Machine Learning Engineer",
+        description="Join a four-person ML team supporting route optimisation.",
+        tags=["python", "ml"],
+        role_family="ai-engineering",
+    )
+    skills = extract_job_skills(job)
+    assert "r" not in skills
+    assert "python" in skills

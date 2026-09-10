@@ -21,9 +21,12 @@ from pathlib import Path
 from app import config
 from app.models import (
     AgentRun,
+    Application,
+    Digest,
     Job,
     JobRole,
     JobStatus,
+    LinkedInPack,
     Profile,
     Resume,
     RunLogEntry,
@@ -129,6 +132,41 @@ def _migrate(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
         CREATE INDEX IF NOT EXISTS idx_jobs_score ON jobs(score DESC);
+
+        CREATE TABLE IF NOT EXISTS applications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          job_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+          status TEXT NOT NULL,
+          channel TEXT NOT NULL,
+          resume_markdown TEXT NOT NULL DEFAULT '',
+          cover_letter TEXT NOT NULL DEFAULT '',
+          tailoring_notes TEXT NOT NULL DEFAULT '[]',
+          submitted_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          error TEXT,
+          notes TEXT NOT NULL DEFAULT '',
+          run_id INTEGER,
+          UNIQUE (job_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS digests (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          run_date TEXT NOT NULL,
+          subject TEXT NOT NULL,
+          text TEXT NOT NULL,
+          to_email TEXT NOT NULL,
+          status TEXT NOT NULL,
+          transport TEXT NOT NULL DEFAULT 'file',
+          path TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS linkedin_packs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          data TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
         """
     )
     conn.commit()
@@ -379,3 +417,171 @@ def _run_from_row(row: sqlite3.Row) -> AgentRun:
         log=[RunLogEntry.model_validate(entry) for entry in json.loads(row["log"] or "[]")],
         error=row["error"],
     )
+
+
+def _application_from_row(row: sqlite3.Row) -> Application:
+    return Application(
+        id=row["id"],
+        job_id=row["job_id"],
+        status=row["status"],
+        channel=row["channel"],
+        resume_markdown=row["resume_markdown"],
+        cover_letter=row["cover_letter"],
+        tailoring_notes=json.loads(row["tailoring_notes"] or "[]"),
+        submitted_at=row["submitted_at"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+        error=row["error"],
+        notes=row["notes"] or "",
+        run_id=row["run_id"],
+        job=get_job(row["job_id"]),
+    )
+
+
+def get_application_for_job(job_id: int) -> Application | None:
+    row = get_conn().execute("SELECT * FROM applications WHERE job_id = ?", (job_id,)).fetchone()
+    return _application_from_row(row) if row else None
+
+
+def get_application(application_id: int) -> Application | None:
+    row = get_conn().execute("SELECT * FROM applications WHERE id = ?", (application_id,)).fetchone()
+    return _application_from_row(row) if row else None
+
+
+def list_applications(limit: int = 100) -> list[Application]:
+    rows = get_conn().execute(
+        "SELECT * FROM applications ORDER BY id DESC LIMIT ?", (limit,)
+    ).fetchall()
+    return [_application_from_row(row) for row in rows]
+
+
+def upsert_application(
+    *,
+    job_id: int,
+    status: str,
+    channel: str,
+    resume_markdown: str,
+    cover_letter: str,
+    tailoring_notes: list[str],
+    run_id: int | None,
+    notes: str = "",
+    error: str | None = None,
+    submitted_at: str | None = None,
+    job_status: JobStatus | None = None,
+) -> Application:
+    stamp = now_iso()
+    with transaction() as conn:
+        existing = conn.execute("SELECT id FROM applications WHERE job_id = ?", (job_id,)).fetchone()
+        if existing:
+            conn.execute(
+                """
+                UPDATE applications
+                SET status = ?, channel = ?, resume_markdown = ?, cover_letter = ?,
+                    tailoring_notes = ?, submitted_at = COALESCE(?, submitted_at),
+                    updated_at = ?, error = ?, notes = ?, run_id = ?
+                WHERE job_id = ?
+                """,
+                (
+                    status,
+                    channel,
+                    resume_markdown,
+                    cover_letter,
+                    json.dumps(tailoring_notes),
+                    submitted_at,
+                    stamp,
+                    error,
+                    notes,
+                    run_id,
+                    job_id,
+                ),
+            )
+        else:
+            conn.execute(
+                """
+                INSERT INTO applications (
+                  job_id, status, channel, resume_markdown, cover_letter, tailoring_notes,
+                  submitted_at, created_at, updated_at, error, notes, run_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    job_id,
+                    status,
+                    channel,
+                    resume_markdown,
+                    cover_letter,
+                    json.dumps(tailoring_notes),
+                    submitted_at,
+                    stamp,
+                    stamp,
+                    error,
+                    notes,
+                    run_id,
+                ),
+            )
+        if job_status:
+            conn.execute(
+                "UPDATE jobs SET status = ?, decided_at = ? WHERE id = ?",
+                (job_status, stamp, job_id),
+            )
+    app = get_application_for_job(job_id)
+    assert app is not None
+    return app
+
+
+def count_submitted_since(iso_stamp: str) -> int:
+    row = get_conn().execute(
+        "SELECT COUNT(*) AS n FROM applications WHERE status = 'submitted' AND submitted_at >= ?",
+        (iso_stamp,),
+    ).fetchone()
+    return int(row["n"]) if row else 0
+
+
+def insert_digest(*, run_date: str, subject: str, text: str, to_email: str, status: str, transport: str, path: str) -> Digest:
+    cur = get_conn().execute(
+        """
+        INSERT INTO digests (run_date, subject, text, to_email, status, transport, path, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (run_date, subject, text, to_email, status, transport, path, now_iso()),
+    )
+    get_conn().commit()
+    return Digest(
+        id=cur.lastrowid,
+        run_date=run_date,
+        subject=subject,
+        text=text,
+        to_email=to_email,
+        status=status,
+        transport=transport,
+        path=path,
+    )
+
+
+def latest_digest() -> Digest | None:
+    row = get_conn().execute("SELECT * FROM digests ORDER BY id DESC LIMIT 1").fetchone()
+    if not row:
+        return None
+    return Digest(
+        id=row["id"],
+        run_date=row["run_date"],
+        subject=row["subject"],
+        text=row["text"],
+        to_email=row["to_email"],
+        status=row["status"],
+        transport=row["transport"],
+        path=row["path"] or "",
+    )
+
+
+def save_linkedin_pack(pack: LinkedInPack) -> None:
+    get_conn().execute(
+        "INSERT INTO linkedin_packs (data, created_at) VALUES (?, ?)",
+        (pack.model_dump_json(), now_iso()),
+    )
+    get_conn().commit()
+
+
+def latest_linkedin_pack() -> LinkedInPack | None:
+    row = get_conn().execute("SELECT data FROM linkedin_packs ORDER BY id DESC LIMIT 1").fetchone()
+    return LinkedInPack.model_validate_json(row["data"]) if row else None
+

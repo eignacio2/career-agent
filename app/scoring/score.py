@@ -132,6 +132,13 @@ def extract_required_years(description: str) -> int | None:
     return min(found) if found else None
 
 
+def _skill_in_haystack(skill: str, haystack: str) -> bool:
+    """One-letter skills like 'R' must not match the 'r' in 'route'."""
+    if len(skill) <= 2:
+        return re.search(rf"(?<![a-z0-9]){re.escape(skill)}(?![a-z0-9])", haystack) is not None
+    return skill in haystack
+
+
 def extract_job_skills(job: Job | SourceJob, extra_vocabulary: Iterable[str] = ()) -> list[str]:
     haystack = f"{job.title} {' '.join(job.tags)} {job.description}".lower()
     vocabulary = set(SKILL_VOCABULARY)
@@ -139,7 +146,7 @@ def extract_job_skills(job: Job | SourceJob, extra_vocabulary: Iterable[str] = (
         cleaned = skill.lower().strip()
         if len(cleaned) > 2:
             vocabulary.add(cleaned)
-    return [skill for skill in vocabulary if skill in haystack]
+    return [skill for skill in vocabulary if _skill_in_haystack(skill, haystack)]
 
 
 def _normalize(value: str) -> str:

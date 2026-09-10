@@ -16,9 +16,11 @@ from pydantic import BaseModel, Field
 RemotePreference = Literal["remote", "hybrid", "onsite", "any"]
 ExperienceLevel = Literal["new-grad", "early-career", "mid", "senior"]
 JobRole = Literal["data-science", "ai-engineering", "adjacent"]
-JobStatus = Literal["new", "shortlisted", "queued", "skipped", "expired"]
+JobStatus = Literal["new", "shortlisted", "queued", "applied", "skipped", "expired"]
 RunStatus = Literal["running", "success", "failed"]
 LogLevel = Literal["info", "warn", "error"]
+ApplicationStatus = Literal["awaiting_review", "submitted", "needs_manual_submit", "failed"]
+ApplicationChannel = Literal["email", "external_form"]
 
 
 class ResumeSkillGroup(BaseModel):
@@ -98,6 +100,8 @@ class Profile(BaseModel):
     excluded_keywords: list[str] = Field(default_factory=list)
     auto_apply_threshold: int = 72
     daily_application_cap: int = 10
+    autopilot_enabled: bool = False
+    digest_email: str = ""
 
 
 class SourceJob(BaseModel):
@@ -160,11 +164,75 @@ class RunLogEntry(BaseModel):
     level: LogLevel = "info"
 
 
+class TailoredApplication(BaseModel):
+    resume_markdown: str
+    cover_letter: str
+    notes: list[str] = Field(default_factory=list)
+
+
+class Application(BaseModel):
+    id: int
+    job_id: int
+    status: ApplicationStatus
+    channel: ApplicationChannel
+    resume_markdown: str
+    cover_letter: str
+    tailoring_notes: list[str] = Field(default_factory=list)
+    submitted_at: str | None = None
+    created_at: str
+    updated_at: str
+    error: str | None = None
+    notes: str = ""
+    run_id: int | None = None
+    job: Job | None = None
+
+
+class LinkedInChange(BaseModel):
+    field: str
+    current: str
+    proposed: str
+    why: str
+    severity: Literal["critical", "recommended", "polish"] = "recommended"
+
+
+class LinkedInSnapshot(BaseModel):
+    headline: str = ""
+    about: str = ""
+    skills: list[str] = Field(default_factory=list)
+    open_to_work: str = ""
+    has_experience_section: bool = False
+    has_certifications_section: bool = False
+
+
+class LinkedInPack(BaseModel):
+    headline: str
+    about: str
+    skills: list[str] = Field(default_factory=list)
+    experience_rewrites: list[dict[str, object]] = Field(default_factory=list)
+    open_to_work: str = ""
+    rationale: list[str] = Field(default_factory=list)
+    changes: list[LinkedInChange] = Field(default_factory=list)
+    generated_by: str = "heuristic"
+
+
+class Digest(BaseModel):
+    id: int
+    run_date: str
+    subject: str
+    text: str
+    to_email: str
+    status: str
+    transport: str
+    path: str = ""
+
+
 class RunStats(BaseModel):
     discovered: int = 0
     scored: int = 0
     queued: int = 0
     skipped: int = 0
+    submitted: int = 0
+    awaiting_review: int = 0
     top_score: int = 0
 
 

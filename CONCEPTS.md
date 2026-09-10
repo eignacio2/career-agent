@@ -16,15 +16,19 @@ Living notes for the Python rewrite. The in-app page `/concepts` is the short ve
 
 | Idea | Where |
 | --- | --- |
-| Test pyramid | Years + caps are pure unit tests. One pipeline test uses a temp SQLite file. |
+| CLI is the product | `python -m app run` — `app/cli.py` |
+| Test pyramid | Years + caps are pure unit tests. CLI test hits SQLite with the sample board. |
 | Parse vs validate | `httpx` returns dicts. `SourceJob` / `Profile` are Pydantic models. Do not score a raw dict. |
-| Unit of work | `db.record_score(...)` is the commit boundary. |
+| Unit of work | `db.record_score` and `db.upsert_application` wrap status writes in one transaction. |
+| Tailor ≠ invent | `app/tailor.py` only reorders existing bullets. |
+| Email vs ATS | Address → `send_mail`. Form URL → pack on disk. No Greenhouse bots. |
 
-## Ahead (do not implement until the core is boring)
+## Ahead (do not pretend these are done)
 
 - Auth on HTML routes
 - Cross-process run lock (today: threading lock + `runs.status = running`)
 - Real migrations
-- LLM overlay that **cannot** override `Excluded` or raise a capped score
-- Digest email, tailoring, PDF import, LinkedIn packs
+- Optional LLM overlay that **cannot** override `Excluded` or raise a capped score
 - Prompt injection: job descriptions are untrusted text
+
+Digest, tailoring, and LinkedIn packs are implemented as heuristics + local files. SMTP is optional.

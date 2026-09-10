@@ -21,6 +21,15 @@ def test_offline_run_queues_new_grad_and_caps_senior(tmp_db):
     # Title pre-filter drops the office assistant before it is stored.
     assert "Office Assistant — AI Lab Admin" not in titles
 
+    apps = tmp_db.list_applications()
+    assert apps, "queued roles should get a tailored pack"
+    assert all("Wayfair" in app.resume_markdown or "Ignacio" in app.resume_markdown for app in apps)
+
+    digest = tmp_db.latest_digest()
+    assert digest is not None
+    assert digest.path
+
+
     # Sample board itself still contains the assistant; the filter is the gate.
     sample_titles = {job.title for job in SampleSource().fetch([], 25)}
     assert "Office Assistant — AI Lab Admin" in sample_titles

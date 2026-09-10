@@ -72,6 +72,8 @@ DEFAULT_PROFILE = Profile(
     excluded_keywords=["unpaid", "commission only", "equity only"],
     auto_apply_threshold=72,
     daily_application_cap=10,
+    autopilot_enabled=False,
+    digest_email="ethignacio25@gmail.com",
 )
 
 DEFAULT_RESUME = Resume(

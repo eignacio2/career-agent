@@ -1,78 +1,88 @@
 # Career Agent
 
-A personal job-search agent for **new-grad data science and AI engineering** roles.
+Python job-search agent for **new-grad data science and AI engineering** roles.
 
-It discovers postings, drops anything that is not in-family from the title alone, scores what remains against your profile, and queues roles that clear your threshold. **You still submit the application.** Automated form-filling on Greenhouse/Lever/Workday/Easy Apply is out of scope (and against most ToS).
+It discovers postings, drops anything that is not in-family from the title, scores them with year-requirement **caps** (not penalties), tailors a resume and cover letter from bullets you already have, emails an application when the posting lists an address, and otherwise prepares a pack for you to submit on Greenhouse/Lever/Workday. It writes a daily digest and a LinkedIn copy-paste pack. **It does not fill ATS forms.**
 
-This is a Python rewrite of an earlier TypeScript/Next.js version. The old tree is in git history (`21f5da9` on `main` before this commit). This slice does **not** tailor resumes, send email, import PDFs, or write LinkedIn copy.
+## Resume bullets you can actually defend
 
-## What it does
+- Built a Python agent that discovers new-grad DS/AI postings from public boards, title-filters noise, and scores fit with a cap so a 5+ years role cannot clear a 72 apply threshold.
+- Tailors a markdown resume and cover letter by reordering existing bullets (never invents employers or metrics); emails applications when a posting lists an address, otherwise queues an ATS pack for manual submit.
+- Writes a daily digest and a field-by-field LinkedIn update pack (headline/About/skills). LinkedIn is copy-paste; there is no unofficial write API.
 
-1. **Discover** — New Grad Positions board (SimplifyJobs), Remotive, Arbeitnow. If they fail, or you set `CAREER_AGENT_OFFLINE=1`, it uses a bundled sample board.
-2. **Pre-filter** — Title allowlist for DS / AI engineering / adjacent analytics. Internships are off by default. Body text is ignored here on purpose.
-3. **Score** — Heuristic only. Weights: title 30, skills 24, level 22, location 16, salary 6, family ±14. Years over-reach, staff titles, and foreign on-site work **cap** the score so they cannot clear the queue threshold.
-4. **Queue** — Status `queued` means “go apply.” `skipped` is kept so you can audit the caps.
-
-## Run locally
-
-Python 3.12+.
+## Run it (this is the interview demo)
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# optional: copy .env.example to .env
-
-uvicorn app.main:app --host 127.0.0.1 --port 43421 --reload
-```
-
-Open http://127.0.0.1:43421
-
-On the dashboard, check **Use sample board only** for the first run so you can see scoring without live APIs.
-
-### Tests
-
-```bash
+python3 -m app run --offline    # sample board, no network
+python3 -m app queued           # what to apply to
+python3 -m app applications    # tailored packs on disk
+python3 -m app digest           # today's digest
+python3 -m app linkedin         # copy-paste pack
+python3 -m app status
 pytest
 ```
 
-The tests that matter most:
-
-- `tests/test_extract_years.py` — `4+ years` without the word “experience” still counts; “past 5 years” does not.
-- `tests/test_score.py` — a new-grad DS I clears 72; a 5+ years senior role is capped below it.
-- `tests/test_filter.py` — Office Assistant never reaches the scorer.
-- `tests/test_pipeline.py` — one full offline run against SQLite.
-
-### Daily cron
+Live boards (New Grad Positions, Remotive, Arbeitnow):
 
 ```bash
-APP_URL=http://127.0.0.1:43421 ./scripts/run_daily.sh
+python -m app run
 ```
 
-Set `CRON_SECRET` if you expose the process beyond localhost. HTML routes are **not** authenticated in this slice.
+Daily cron (no web server required):
 
-## Profile
+```bash
+0 13 * * * cd /path/to/career-agent && .venv/bin/python -m app run >> /tmp/career-agent.log 2>&1
+```
 
-Defaults are Ethan Ignacio’s public new-grad targeting (UIC CS, May 2026; Wayfair AI agent externship). Edit **Profile** in the UI. Do not invent pandas/scikit-learn experience the resume does not have — the scorer will then over-rank classic DS postings.
+Optional viewer: `uvicorn app.main:app --host 127.0.0.1 --port 43421`
 
-## What this is not
+## What happens in one run
 
-- Not an autopilot. Queued ≠ submitted.
-- Not a LinkedIn writer. LinkedIn has no official write API for this.
-- Not production-hardened. Cron is the only gated route. SQLite lives in `.data/`. This process is a long-running server, not a serverless deploy.
+```
+discover → title filter → SQLite dedupe → score (caps) → tailor
+       → email if apply address + autopilot, else pack for you
+       → LinkedIn pack → digest.md (+ SMTP if configured)
+```
+
+Autopilot is **off** by default. Packs land in `.data/applications/<id>/`. Mail without SMTP lands in `.data/outbox/`. Digests land in `.data/digests/`.
+
+Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. Set `autopilot_enabled` on the profile only if you want email applications sent unattended.
+
+## Tests that matter in an interview
+
+- `tests/test_extract_years.py` — `4+ years` counts; “past 5 years” does not
+- `tests/test_score.py` — new-grad DS I clears 72; 5+ years senior is capped below it
+- `tests/test_filter.py` — Office Assistant never reaches the scorer
+- `tests/test_tailor.py` — tailored resume still contains Wayfair, never invents employers
+- `tests/test_linkedin.py` — headline drops “seeking internship” / Microsoft Office
+- `tests/test_cli.py` — `python -m app run --offline` is the product
+
+## Walkthrough files (open these, not the templates)
+
+1. `app/pipeline.py` — one run
+2. `app/sources/filter.py` — title allowlist
+3. `app/scoring/score.py` — weights and caps
+4. `app/tailor.py` — reorder, do not invent
+5. `tests/test_score.py` — proof
+
+See `INTERVIEW.md` for the 15-minute script.
 
 ## Layout
 
 ```
-app/models.py          SourceJob, Job, Profile
-app/sources/filter.py  title allowlist
-app/sources/           board adapters + discover()
-app/scoring/score.py   heuristic scorer
-app/db.py              SQLite
-app/pipeline.py        one run
-app/main.py            FastAPI + Jinja
-tests/                 pytest
+app/pipeline.py       one run
+app/cli.py            python -m app
+app/sources/          boards + title filter
+app/scoring/score.py  heuristic scorer
+app/tailor.py         resume / cover letter
+app/apply.py          email vs ATS pack
+app/digest.py         daily markdown
+app/linkedin.py       copy-paste pack
+app/db.py             SQLite
+app/main.py           optional FastAPI viewer
+tests/
 ```
-
-Read **How it works** in the app (`/concepts`) for why each layer exists.
