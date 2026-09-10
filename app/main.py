@@ -34,16 +34,17 @@ class NoCacheHTML(BaseHTTPMiddleware):
 app.add_middleware(NoCacheHTML)
 
 
-def _ctx(request: Request, **extra):
-    profile = db.get_profile()
-    counts = db.count_jobs()
+def _ctx(**extra):
     return {
-        "request": request,
-        "profile": profile,
-        "counts": counts,
+        "profile": db.get_profile(),
+        "counts": db.count_jobs(),
         "latest_run": db.latest_run(),
         **extra,
     }
+
+
+def _page(request: Request, name: str, status_code: int = 200, **extra):
+    return templates.TemplateResponse(request, name, _ctx(**extra), status_code=status_code)
 
 
 @app.get("/health")
@@ -53,18 +54,14 @@ def health():
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
-    jobs = db.list_jobs(limit=12)
-    return templates.TemplateResponse("dashboard.html", _ctx(request, jobs=jobs))
+    return _page(request, "dashboard.html", jobs=db.list_jobs(limit=12))
 
 
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs_page(request: Request, status: str | None = None):
     statuses = [status] if status in {"new", "shortlisted", "queued", "skipped"} else None
     jobs = db.list_jobs(status=statuses, limit=200)
-    return templates.TemplateResponse(
-        "jobs.html",
-        _ctx(request, jobs=jobs, filter_status=status or "all"),
-    )
+    return _page(request, "jobs.html", jobs=jobs, filter_status=status or "all")
 
 
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
@@ -72,17 +69,17 @@ def job_detail(request: Request, job_id: int):
     job = db.get_job(job_id)
     if job is None:
         raise HTTPException(404, "Job not found")
-    return templates.TemplateResponse("job_detail.html", _ctx(request, job=job))
+    return _page(request, "job_detail.html", job=job)
 
 
 @app.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request):
-    return templates.TemplateResponse("settings.html", _ctx(request))
+    return _page(request, "settings.html")
 
 
 @app.get("/concepts", response_class=HTMLResponse)
 def concepts_page(request: Request):
-    return templates.TemplateResponse("concepts.html", _ctx(request))
+    return _page(request, "concepts.html")
 
 
 def _csv(value: str) -> list[str]:
@@ -157,10 +154,12 @@ def start_run(request: Request, offline: Annotated[str, Form()] = "off"):
         )
     except RunInProgress as exc:
         if "text/html" in request.headers.get("accept", ""):
-            return templates.TemplateResponse(
+            return _page(
+                request,
                 "dashboard.html",
-                _ctx(request, jobs=db.list_jobs(limit=12), error=str(exc)),
                 status_code=409,
+                jobs=db.list_jobs(limit=12),
+                error=str(exc),
             )
         raise HTTPException(409, str(exc)) from exc
     return RedirectResponse(f"/?ran={result['run_id']}", status_code=303)
