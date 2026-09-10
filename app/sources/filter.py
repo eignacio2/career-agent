@@ -98,8 +98,15 @@ class TitleAssessment:
     internship: bool
 
 
+NON_IC = re.compile(r"\b(product|program|project)\s+manager\b", re.I)
+
+
 def _is_fde(title: str) -> bool:
-    return any(pattern.search(title) for pattern in FORWARD_DEPLOYED_TITLES)
+    if not any(pattern.search(title) for pattern in FORWARD_DEPLOYED_TITLES):
+        return False
+    if NON_IC.search(title) and not re.search(r"\bengineer\b|\bfde\b", title, re.I):
+        return False
+    return True
 
 
 def assess_job_title(title: str) -> TitleAssessment | None:

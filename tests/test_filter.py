@@ -75,6 +75,11 @@ def test_adjacent_data_analyst_is_not_a_target():
     assert not is_plausible_target(_job("Data Analyst, Early Career Program"))
 
 
+def test_forward_deployed_product_manager_is_not_a_target():
+    assert not is_plausible_target(_job("Forward Deployed Product Manager, Public Sector"))
+    assert is_plausible_target(_job("Forward Deployed Software Engineer, Public Sector"))
+
+
 def test_generic_new_grad_swe_is_not_a_target():
     assessment = assess_job_title("Software Engineer, University Graduate")
     assert assessment is not None
