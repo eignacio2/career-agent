@@ -27,6 +27,42 @@ def test_new_grad_role_clears_threshold():
     assert match.score >= 72
 
 
+def test_remote_new_grad_clears_threshold():
+    """Remote is no longer a 2-point location stub; it can still clear 72."""
+    job = make_job(
+        title="Associate AI Engineer, University Graduate",
+        early_career=True,
+        role_family="ai-engineering",
+        remote=True,
+        location="Remote (US)",
+        description=(
+            "University graduate programme. Graduating within the last year. "
+            "Strong Python. LLM API, FastAPI, RAG. No prior industry ML required."
+        ),
+        tags=["python", "llm", "rag", "fastapi"],
+        salary_text="$105,000 - $125,000",
+    )
+    match = score_heuristically(job, DEFAULT_PROFILE, DEFAULT_RESUME)
+    assert match.score >= THRESHOLD, match
+    assert any("remote" in reason.lower() for reason in match.reasons)
+
+
+def test_denver_hybrid_is_not_a_hard_drop_in_score():
+    job = make_job(
+        title="Junior Machine Learning Engineer",
+        early_career=True,
+        role_family="ai-engineering",
+        remote=False,
+        location="Denver, CO (Hybrid)",
+        description="1+ years of experience. Python and one ML framework. Docker.",
+        tags=["python", "ml", "docker"],
+        salary_text="$98,000 - $118,000",
+    )
+    match = score_heuristically(job, DEFAULT_PROFILE, DEFAULT_RESUME)
+    assert any("hybrid" in reason.lower() for reason in match.reasons)
+    assert match.score > 16
+
+
 def test_new_grad_fde_clears_threshold():
     job = make_job(
         title="Forward Deployed Engineer, New Grad",

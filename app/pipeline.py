@@ -18,6 +18,7 @@ from app.mail import MailMessage, is_smtp_configured, send_mail
 from app.geo import location_allowed
 from app.models import Job, RunLogEntry, RunStats, TailoredApplication, now_iso
 from app.scoring.score import score_job
+from app.setup import SetupIncomplete, missing_setup_fields
 from app.sources.discover import discover
 from app.sources.filter import classify_role, is_plausible_target
 from app.tailor import tailor_application
@@ -77,6 +78,10 @@ def run_agent(
     try:
         if db.is_run_in_progress():
             raise RunInProgress("An agent run is already in progress.")
+        profile = db.get_profile()
+        missing = missing_setup_fields(profile)
+        if missing:
+            raise SetupIncomplete(missing)
         return _run(
             trigger=trigger,
             limit_per_source=limit_per_source,
@@ -159,7 +164,7 @@ def _run(
             (
                 f"{len(title_ok)} of {len(discovery.jobs)} postings passed the title pre-filter "
                 f"(AI Engineer / Forward Deployed). "
-                f"{len(plausible)} also passed the Chicago office/hybrid filter "
+                f"{len(plausible)} also passed the location filter "
                 f"({profile.location_mode}); dropped {dropped_location} on location."
             ),
         )

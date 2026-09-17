@@ -1,7 +1,7 @@
 from app.cli import main
 
 
-def test_cli_offline_run_and_queued(tmp_db, capsys):
+def test_cli_offline_run_and_queued(tmp_db_ready, capsys):
     assert main(["run", "--offline"]) == 0
     out = capsys.readouterr().out
     assert "Run " in out

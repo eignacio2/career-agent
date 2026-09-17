@@ -1,8 +1,11 @@
-"""Seed profile and resume for Ethan Ignacio.
+"""Two profiles live here, on purpose.
 
-This is public resume-level information, not a dump of imported PDFs.
-The TypeScript v1 stored the imported resume in .data/ (gitignored). This
-file is the starting point for scoring until the settings page is saved.
+`DEFAULT_PROFILE` / `DEFAULT_RESUME` are Ethan — a complete example for
+`python -m app load-demo` and for tests. A brand-new SQLite file is *not*
+seeded as Ethan. `blank_profile()` is an empty candidate so someone else
+cannot accidentally run his search.
+
+Interview line: the engine is generic; Ethan is a fixture.
 """
 
 from __future__ import annotations
@@ -25,8 +28,8 @@ DEFAULT_PROFILE = Profile(
     headline="New-grad CS · AI Engineer / Forward Deployed Engineer (agents, n8n, Gemini)",
     summary=(
         "Computer science student at UIC (expected May 2026) targeting new-grad "
-        "AI engineering and forward deployed engineering roles in Chicago "
-        "(on-site or hybrid, not remote-only). Strongest demonstrated "
+        "AI engineering and forward deployed engineering roles that are remote, "
+        "hybrid, or on-site (Chicago is a plus, not a hard filter). Strongest demonstrated "
         "work is AI agent engineering (Wayfair externship: n8n + Gemini) — wiring LLM "
         "tools into real workflows with a customer-adjacent constraint. Not a classic "
         "data science hire (pandas/scikit-learn/experimentation are thin); do not invent that."
@@ -70,7 +73,7 @@ DEFAULT_PROFILE = Profile(
         "Chicago, IL",
     ],
     remote_preference="hybrid",
-    location_mode="chicago-office",
+    location_mode="remote-hybrid-onsite",
     min_salary=85000,
     excluded_companies=[],
     required_keywords=[],
@@ -87,7 +90,7 @@ DEFAULT_RESUME = Resume(
         title="New-grad CS · AI Engineer / Forward Deployed Engineer",
         email="ethignacio25@gmail.com",
         phone="630-524-8692",
-        location="Chicago, IL · Hybrid or on-site",
+        location="Chicago, IL · Remote, hybrid, or on-site",
         links=[
             {"label": "LinkedIn", "url": "https://www.linkedin.com/in/ethan-ignacio/"},
             {"label": "GitHub", "url": "https://github.com/eignacio2"},
@@ -95,7 +98,7 @@ DEFAULT_RESUME = Resume(
         summary=(
             "UIC computer science student (May 2026) with an AI Agent Engineering "
             "externship at Wayfair. Looking for a first full-time AI engineering "
-            "or forward deployed engineering role in Chicago (hybrid or on-site). Comfortable wiring LLM tools into "
+            "or forward deployed engineering role (remote, hybrid, or on-site; Chicago is a plus). Comfortable wiring LLM tools into "
             "real workflows; not yet a production ML or experimentation hire."
         ),
     ),
@@ -145,3 +148,49 @@ DEFAULT_RESUME = Resume(
     ],
     certifications=["AWS Certified Cloud Practitioner"],
 )
+
+# Same objects, named for the CLI so "demo" is obvious in interview walkthroughs.
+DEMO_PROFILE = DEFAULT_PROFILE
+DEMO_RESUME = DEFAULT_RESUME
+
+
+def blank_profile() -> Profile:
+    """Empty candidate. Search is blocked until name, email, and titles are saved."""
+    return Profile(
+        full_name="",
+        email="",
+        phone="",
+        location="",
+        headline="",
+        summary="",
+        linkedin_url="",
+        github_url="",
+        years_experience=0,
+        experience_level="new-grad",
+        max_years_required=2,
+        include_internships=False,
+        skills=[],
+        target_titles=[],
+        target_locations=[],
+        remote_preference="hybrid",
+        location_mode="remote-hybrid-onsite",
+        min_salary=None,
+        excluded_companies=[],
+        required_keywords=[],
+        excluded_keywords=[],
+        auto_apply_threshold=72,
+        daily_application_cap=10,
+        autopilot_enabled=False,
+        digest_email="",
+    )
+
+
+def blank_resume() -> Resume:
+    return Resume(
+        basics=ResumeBasics(name="", title="", email="", phone="", location="", summary=""),
+        skill_groups=[],
+        experience=[],
+        projects=[],
+        education=[],
+        certifications=[],
+    )

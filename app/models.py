@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field, field_validator
 RemotePreference = Literal["remote", "hybrid", "onsite", "any"]
 ExperienceLevel = Literal["new-grad", "early-career", "mid", "senior"]
 JobRole = Literal["data-science", "ai-engineering", "forward-deployed", "adjacent"]
-LocationMode = Literal["chicago-office", "any"]
+LocationMode = Literal["remote-hybrid-onsite", "chicago-office", "any"]
 JobStatus = Literal["new", "shortlisted", "queued", "applied", "skipped", "expired"]
 RunStatus = Literal["running", "success", "failed"]
 LogLevel = Literal["info", "warn", "error"]
@@ -95,7 +95,7 @@ class Profile(BaseModel):
     target_titles: list[str] = Field(default_factory=list)
     target_locations: list[str] = Field(default_factory=list)
     remote_preference: RemotePreference = "hybrid"
-    location_mode: LocationMode = "chicago-office"
+    location_mode: LocationMode = "remote-hybrid-onsite"
     min_salary: int | None = None
     excluded_companies: list[str] = Field(default_factory=list)
     required_keywords: list[str] = Field(default_factory=list)
@@ -109,7 +109,7 @@ class Profile(BaseModel):
     @classmethod
     def _coerce_location_mode(cls, value: object) -> object:
         if value in (None, "", "us-or-remote", "targets-or-remote"):
-            return "chicago-office"
+            return "remote-hybrid-onsite"
         return value
 
 

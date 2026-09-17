@@ -33,7 +33,7 @@ from app.models import (
     RunStats,
     now_iso,
 )
-from app.profile import DEFAULT_PROFILE, DEFAULT_RESUME
+from app.profile import DEFAULT_PROFILE, DEFAULT_RESUME, blank_profile, blank_resume
 
 _local = threading.local()
 
@@ -175,28 +175,32 @@ def _migrate(conn: sqlite3.Connection) -> None:
 
 
 def _seed_if_empty(conn: sqlite3.Connection) -> None:
+    """New databases start blank. Ethan is loaded only via `python -m app load-demo`."""
     row = conn.execute("SELECT id FROM profile WHERE id = 1").fetchone()
     if row is None:
         conn.execute(
             "INSERT INTO profile (id, data, updated_at) VALUES (1, ?, ?)",
-            (DEFAULT_PROFILE.model_dump_json(), now_iso()),
+            (blank_profile().model_dump_json(), now_iso()),
         )
     row = conn.execute("SELECT id FROM resume WHERE id = 1").fetchone()
     if row is None:
         conn.execute(
             "INSERT INTO resume (id, data, updated_at) VALUES (1, ?, ?)",
-            (DEFAULT_RESUME.model_dump_json(), now_iso()),
+            (blank_resume().model_dump_json(), now_iso()),
         )
     conn.commit()
 
 
 def _refresh_stale_search_defaults(conn: sqlite3.Connection) -> None:
-    """Move a still-seeded DS search onto AI Engineer / FDE without clobbering custom titles."""
+    """Only rewrite an old Ethan DS seed. Leave blank and custom profiles alone."""
     row = conn.execute("SELECT data FROM profile WHERE id = 1").fetchone()
     if row is None:
         return
     data = json.loads(row["data"])
+    name = str(data.get("full_name") or "").strip().lower()
     titles = [str(item).lower() for item in data.get("target_titles") or []]
+    if not name or not titles:
+        return
     looking_ds = any("data scientist" in item or item.strip() == "data science" for item in titles)
     looking_fde = any("forward deployed" in item for item in titles)
     changed = False
@@ -206,9 +210,19 @@ def _refresh_stale_search_defaults(conn: sqlite3.Connection) -> None:
         data["summary"] = DEFAULT_PROFILE.summary
         changed = True
     if data.get("location_mode") in (None, "", "us-or-remote", "targets-or-remote"):
-        data["location_mode"] = "chicago-office"
-        data["target_locations"] = DEFAULT_PROFILE.target_locations
-        data["remote_preference"] = "hybrid"
+        data["location_mode"] = "remote-hybrid-onsite"
+        if not data.get("target_locations"):
+            data["target_locations"] = DEFAULT_PROFILE.target_locations
+        data["remote_preference"] = data.get("remote_preference") or "hybrid"
+        changed = True
+    # Previous product default was chicago-office. Rewrite that seed so existing
+    # Ethan DBs pick up remote/hybrid/on-site without a manual Settings click.
+    # Leave chicago-office in place for anyone else who opted into it.
+    if (
+        data.get("location_mode") == "chicago-office"
+        and str(data.get("full_name") or "").strip().lower() == "ethan ignacio"
+    ):
+        data["location_mode"] = "remote-hybrid-onsite"
         changed = True
     if changed:
         conn.execute(

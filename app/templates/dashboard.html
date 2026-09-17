@@ -5,17 +5,20 @@
   <div>
     <p class="kicker">Pipeline</p>
     <h1>Discover, score, queue. You submit.</h1>
-    <p class="lede">CLI is the product: <code>python -m app run</code>. This page is a viewer. The agent scores new-grad AI Engineer and Forward Deployed Engineer roles in Chicago (on-site or hybrid), prepares a pack, and does not fill ATS forms.</p>
+    <p class="lede">CLI is the product: <code>python -m app run</code>. This page is a viewer. The agent scores new-grad AI Engineer and Forward Deployed Engineer roles (remote, hybrid, or on-site; Chicago is a scoring boost), prepares a pack, and does not fill ATS forms.</p>
   </div>
   <form method="post" action="/runs" class="run-form">
     <label class="check">
       <input type="checkbox" name="offline" value="on">
       Use sample board only
     </label>
-    <button type="submit">Run agent</button>
+    <button type="submit" {% if not setup_ready %}disabled{% endif %}>Run agent</button>
   </form>
 </header>
 
+{% if not setup_ready %}
+<p class="banner error">Search is blocked until this profile has a name, email, and at least one target title. <a href="/settings">Open Profile</a>, or from the terminal run <code>python -m app load-demo</code> to load the bundled example candidate.</p>
+{% endif %}
 {% if error %}
 <p class="banner error">{{ error }}</p>
 {% endif %}

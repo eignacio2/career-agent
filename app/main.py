@@ -15,6 +15,7 @@ from app import db
 from app.config import CRON_SECRET
 from app.models import Profile
 from app.pipeline import RunInProgress, run_agent
+from app.setup import SetupIncomplete, missing_setup_fields
 
 ROOT = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(ROOT / "templates"))
@@ -35,10 +36,14 @@ app.add_middleware(NoCacheHTML)
 
 
 def _ctx(**extra):
+    profile = db.get_profile()
+    missing = missing_setup_fields(profile)
     return {
-        "profile": db.get_profile(),
+        "profile": profile,
         "counts": db.count_jobs(),
         "latest_run": db.latest_run(),
+        "setup_missing": missing,
+        "setup_ready": not missing,
         **extra,
     }
 
@@ -103,7 +108,7 @@ def save_settings(
     target_titles: Annotated[str, Form()] = "",
     target_locations: Annotated[str, Form()] = "",
     remote_preference: Annotated[str, Form()] = "any",
-    location_mode: Annotated[str, Form()] = "chicago-office",
+    location_mode: Annotated[str, Form()] = "remote-hybrid-onsite",
     min_salary: Annotated[str, Form()] = "",
     excluded_companies: Annotated[str, Form()] = "",
     excluded_keywords: Annotated[str, Form()] = "",
@@ -118,8 +123,8 @@ def save_settings(
         experience_level = "new-grad"
     if remote_preference not in ("remote", "hybrid", "onsite", "any"):
         remote_preference = "any"
-    if location_mode not in ("chicago-office", "any"):
-        location_mode = "chicago-office"
+    if location_mode not in ("remote-hybrid-onsite", "chicago-office", "any"):
+        location_mode = "remote-hybrid-onsite"
 
     updated = current.model_copy(
         update={
@@ -156,6 +161,16 @@ def start_run(request: Request, offline: Annotated[str, Form()] = "off"):
             trigger="web",
             offline=offline in {"on", "true", "1"},
         )
+    except SetupIncomplete as exc:
+        if "text/html" in request.headers.get("accept", ""):
+            return _page(
+                request,
+                "dashboard.html",
+                status_code=400,
+                jobs=db.list_jobs(limit=12),
+                error=str(exc),
+            )
+        raise HTTPException(400, str(exc)) from exc
     except RunInProgress as exc:
         if "text/html" in request.headers.get("accept", ""):
             return _page(
@@ -187,6 +202,8 @@ def cron_daily(request: Request, offline: bool = False):
     _authorize(request)
     try:
         result = run_agent(trigger="cron", offline=offline)
+    except SetupIncomplete as exc:
+        raise HTTPException(400, str(exc)) from exc
     except RunInProgress as exc:
         raise HTTPException(409, str(exc)) from exc
     return JSONResponse(result)

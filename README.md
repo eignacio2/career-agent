@@ -2,15 +2,28 @@
 
 Python job-search agent for **new-grad AI Engineer and Forward Deployed Engineer** roles.
 
-It discovers postings, drops anything that is not AI engineering or forward-deployed from the title, applies a **location filter** (US on-site or remote by default), scores them with year-requirement **caps** (not penalties), tailors a resume and cover letter from bullets you already have, emails an application when the posting lists an address, and otherwise prepares a pack for you to submit on Greenhouse/Lever/Workday. It writes a daily digest and a LinkedIn copy-paste pack. **It does not fill ATS forms.**
+It discovers postings, drops anything that is not AI engineering or forward-deployed from the title, keeps **remote, hybrid, and on-site roles in any city**, scores them with year-requirement **caps** (not penalties), tailors a resume and cover letter from bullets you already have, emails an application when the posting lists an address, and otherwise prepares a pack for you to submit on Greenhouse/Lever/Workday. It writes a daily digest and a LinkedIn copy-paste pack. **It does not fill ATS forms.**
 
 Classic data-science titles (Data Scientist, statistician, quant) are classified but **not queued**. Adjacent SWE / analyst programmes are dropped the same way.
 
 ## Resume bullets you can actually defend
 
-- Built a Python agent that discovers new-grad AI Engineer and Forward Deployed Engineer postings from public boards plus company career APIs, title-filters noise, hard-filters foreign on-site roles, and scores fit with a cap so a 5+ years role cannot clear a 72 apply threshold.
+- Built a Python agent that discovers new-grad AI Engineer and Forward Deployed Engineer postings from public boards plus company career APIs, title-filters noise, keeps remote/hybrid/on-site roles (Chicago is a scoring boost, not a hard drop), and scores fit with a cap so a 5+ years role cannot clear a 72 apply threshold.
 - Tailors a markdown resume and cover letter by reordering existing bullets (never invents employers or metrics); emails applications when a posting lists an address, otherwise queues an ATS pack for manual submit.
 - Writes a daily digest and a field-by-field LinkedIn update pack (headline/About/skills). LinkedIn is copy-paste; there is no unofficial write API.
+
+## First-time setup
+
+A new database starts **empty**. The agent will not search until the profile has a name, an email, and at least one target title. That is so cloning this repo does not silently run Ethan Ignacio's search.
+
+```bash
+python3 -m app status           # tells you what is missing
+# Fill the Profile page in the viewer, or load the bundled example:
+python3 -m app load-demo        # Ethan Ignacio, AI Engineer / FDE
+python3 -m app run
+```
+
+`load-demo` overwrites the candidate in *this* SQLite file. Use it for interviews and for trying the pipeline; use the Profile page when the candidate is someone else.
 
 ## Run it
 
@@ -56,9 +69,11 @@ Boards that need a key or that 401 without login (Hugging Face jobs, most ATS se
 
 ## Location filter
 
-One rule, on purpose: **Chicago on-site or hybrid**. Remote-only, NYC/SF, and foreign hubs are dropped before scoring. `location_mode=any` turns the hard filter off (tests / scoring demos).
+Default (`location_mode=remote-hybrid-onsite`): **remote, hybrid, or on-site, any city**. A posting with no location string is kept (unknown arrangement), not dropped. Scoring still boosts target cities (Chicago on the demo profile) and gives remote full location points. Foreign on-site is **not** pre-filtered; the scorer caps it at 50.
 
-That is easier to walk through than a US-vs-remote country list. The function is `is_chicago_office` in `app/geo.py`.
+Opt-in `location_mode=chicago-office` is the old Chicago office/hybrid hard filter. `location_mode=any` turns the hard filter off entirely (same inclusion as the default, different log wording).
+
+`work_arrangement` and `location_allowed` live in `app/geo.py`.
 
 ## What happens in one run
 
@@ -77,7 +92,7 @@ Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. Set `autopilot_ena
 - `tests/test_extract_years.py` — `4+ years` counts; “past 5 years” does not
 - `tests/test_score.py` — new-grad AI Engineer / FDE clears 72; 5+ years senior is capped below it
 - `tests/test_filter.py` — Data Scientist and Office Assistant never reach the scorer as targets
-- `tests/test_location.py` — Chicago hybrid/on-site is kept; Remote (US) and NYC are dropped
+- `tests/test_location.py` — remote, Denver hybrid, and London on-site are kept; chicago-office mode still drops Remote (US) and NYC
 - `tests/test_tailor.py` — tailored resume still contains Wayfair, never invents employers
 - `tests/test_linkedin.py` — headline drops “seeking internship” / Microsoft Office
 - `tests/test_cli.py` — `python -m app run --offline` is the product

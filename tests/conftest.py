@@ -32,3 +32,11 @@ def tmp_db(tmp_path: Path, monkeypatch):
     db.reset_connection()
     yield db
     db.reset_connection()
+
+
+@pytest.fixture
+def tmp_db_ready(tmp_db):
+    """Same isolated DB, with the Ethan demo candidate saved so a run can start."""
+    tmp_db.save_profile(DEFAULT_PROFILE)
+    tmp_db.save_resume(DEFAULT_RESUME)
+    return tmp_db

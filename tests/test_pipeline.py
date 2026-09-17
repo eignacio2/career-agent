@@ -1,11 +1,22 @@
 from app.pipeline import run_agent
+from app.setup import SetupIncomplete
 from app.sources.sample import SampleSource
 
 
-def test_offline_run_queues_new_grad_and_caps_senior(tmp_db):
+def test_blank_profile_cannot_run(tmp_db):
+    try:
+        run_agent(trigger="test", offline=True)
+        raise AssertionError("blank profile should not start a search")
+    except SetupIncomplete as exc:
+        assert "full name" in exc.missing
+        assert "email" in exc.missing
+        assert "target title" in " ".join(exc.missing)
+
+
+def test_offline_run_queues_new_grad_and_caps_senior(tmp_db_ready):
     result = run_agent(trigger="test", offline=True, limit_per_source=25)
     assert result["status"] == "success"
-    jobs = tmp_db.list_jobs(limit=50)
+    jobs = tmp_db_ready.list_jobs(limit=50)
     titles = {job.title: job for job in jobs}
 
     assert "Associate AI Engineer, University Graduate" in titles
@@ -27,24 +38,35 @@ def test_offline_run_queues_new_grad_and_caps_senior(tmp_db):
     # Title pre-filter drops the office assistant before it is stored.
     assert "Office Assistant — AI Lab Admin" not in titles
 
-    # Location filter keeps Chicago office/hybrid only.
-    assert "Thames Analytics" not in {job.company for job in jobs}
-    assert "Neckar Mobility" not in {job.company for job in jobs}
-    assert "Halcyon Logistics" not in {job.company for job in jobs}  # Denver hybrid
+    # Location filter keeps remote, hybrid, and on-site in any city.
+    # Data-science titles still never reach insert (Neckar).
+    companies = {job.company for job in jobs}
+    assert "Halcyon Logistics" in companies  # Denver hybrid junior MLE
+    assert "Harborview AI" in companies  # remote 4+ years — stored so the cap can fire
+    assert "Thames Analytics" in companies  # London on-site — stored, visa-capped
+    assert "Neckar Mobility" not in companies
     assert titles["Associate AI Engineer, University Graduate"].location.startswith("Chicago")
     assert titles["Forward Deployed Engineer, New Grad"].location.startswith("Chicago")
 
-    # Senior/staff AI titles in Chicago still reach the scorer so the cap can fire.
+    harbor = titles["AI Engineer, Retrieval Platform"]
+    assert harbor.status == "skipped"
+    assert (harbor.score or 0) <= 45
+
+    thames = next(job for job in jobs if job.company == "Thames Analytics")
+    assert (thames.score or 0) <= 50
+    assert thames.status == "skipped"
+
+    # Senior/staff AI titles still reach the scorer so the cap can fire.
     assert "Staff Machine Learning Engineer" in titles
     staff = titles["Staff Machine Learning Engineer"]
     assert staff.status == "skipped"
     assert (staff.score or 0) <= 25
 
-    apps = tmp_db.list_applications()
+    apps = tmp_db_ready.list_applications()
     assert apps, "queued roles should get a tailored pack"
     assert all("Wayfair" in app.resume_markdown or "Ignacio" in app.resume_markdown for app in apps)
 
-    digest = tmp_db.latest_digest()
+    digest = tmp_db_ready.latest_digest()
     assert digest is not None
     assert digest.path
 
@@ -54,9 +76,9 @@ def test_offline_run_queues_new_grad_and_caps_senior(tmp_db):
     assert "Data Scientist I (New Grad)" in sample_titles
 
 
-def test_second_run_is_idempotent(tmp_db):
+def test_second_run_is_idempotent(tmp_db_ready):
     first = run_agent(trigger="a", offline=True)
     second = run_agent(trigger="b", offline=True)
     assert first["stats"]["discovered"] > 0
     assert second["stats"]["discovered"] == 0
-    assert tmp_db.count_jobs()["total"] == first["stats"]["discovered"]
+    assert tmp_db_ready.count_jobs()["total"] == first["stats"]["discovered"]

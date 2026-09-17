@@ -12,7 +12,7 @@ def test_html_pages_render(tmp_db):
     assert b"Career Agent" in client.get("/").content
 
 
-def test_offline_run_via_http(tmp_db):
+def test_offline_run_via_http(tmp_db_ready):
     client = TestClient(app)
     response = client.post("/runs", data={"offline": "on"}, follow_redirects=False)
     assert response.status_code == 303

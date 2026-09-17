@@ -19,6 +19,8 @@ from app import db
 from app.apply import submit_by_email
 from app.models import TailoredApplication
 from app.pipeline import RunInProgress, run_agent
+from app.profile import DEMO_PROFILE, DEMO_RESUME
+from app.setup import SetupIncomplete, missing_setup_fields
 from app.tailor import tailor_application
 
 
@@ -41,6 +43,10 @@ def cmd_run(args: argparse.Namespace) -> int:
         )
     except RunInProgress as exc:
         print(exc, file=sys.stderr)
+        return 1
+    except SetupIncomplete as exc:
+        print(exc, file=sys.stderr)
+        print("Save the Profile page, or run: python -m app load-demo", file=sys.stderr)
         return 1
     stats = result["stats"]
     print(
@@ -124,11 +130,29 @@ def cmd_status(_args: argparse.Namespace) -> int:
     profile = db.get_profile()
     counts = db.count_jobs()
     run = db.latest_run()
-    print(f"{profile.full_name}  ·  {profile.experience_level}  ·  ceiling {profile.max_years_required} yrs")
+    missing = missing_setup_fields(profile)
+    if missing:
+        print("Setup incomplete — search is blocked.")
+        print("Missing: " + ", ".join(missing))
+        print("Fill the Profile page, or: python -m app load-demo")
+        print()
+    label = profile.full_name.strip() or "(no name yet)"
+    print(f"{label}  ·  {profile.experience_level}  ·  ceiling {profile.max_years_required} yrs")
     print(f"Threshold {profile.auto_apply_threshold}  ·  autopilot {profile.autopilot_enabled}")
+    print(f"Target titles: {', '.join(profile.target_titles) or '(none)'}")
     print(f"Jobs: {counts}")
     if run:
         print(f"Last run #{run.id} {run.status} at {run.started_at}  stats={run.stats.model_dump()}")
+    return 0
+
+
+def cmd_load_demo(_args: argparse.Namespace) -> int:
+    """Install the bundled Ethan Ignacio profile so the sample search is runnable."""
+    db.save_profile(DEMO_PROFILE)
+    db.save_resume(DEMO_RESUME)
+    print("Loaded the demo candidate (Ethan Ignacio, AI Engineer / FDE, remote/hybrid/on-site).")
+    print("This overwrites the profile and resume in this database.")
+    print("Next: python -m app run")
     return 0
 
 
@@ -191,7 +215,7 @@ def cmd_send(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m app",
-        description="New-grad AI engineering / forward deployed engineering job-search agent.",
+        description="Local job-search agent. One candidate per database.",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -215,6 +239,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = sub.add_parser("status", help="Profile + job counts")
     status.set_defaults(func=cmd_status)
+
+    demo = sub.add_parser(
+        "load-demo",
+        help="Load the bundled Ethan Ignacio profile (overwrites this database's candidate)",
+    )
+    demo.set_defaults(func=cmd_load_demo)
 
     show = sub.add_parser("show", help="One job, with score reasons")
     show.add_argument("job_id", type=int)

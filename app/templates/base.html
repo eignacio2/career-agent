@@ -18,8 +18,8 @@
         <a href="/concepts" class="{% if request.url.path == '/concepts' %}active{% endif %}">How it works</a>
       </nav>
       <div class="nav-meta">
-        <p>{{ profile.full_name }}</p>
-        <p class="muted">{{ profile.experience_level }} · ceiling {{ profile.max_years_required }} yrs</p>
+        <p>{{ profile.full_name or "No candidate yet" }}</p>
+        <p class="muted">{% if setup_ready %}{{ profile.experience_level }} · ceiling {{ profile.max_years_required }} yrs{% else %}Setup incomplete{% endif %}</p>
       </div>
     </aside>
     <main class="main">

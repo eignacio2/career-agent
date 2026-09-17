@@ -9,6 +9,9 @@
   </div>
 </header>
 
+{% if not setup_ready %}
+<p class="banner error">Missing: {{ setup_missing | join(', ') }}. Save this form with those fields filled before you run a search.</p>
+{% endif %}
 {% if request.query_params.get('saved') %}
 <p class="banner">Profile saved. Re-run the agent to rescore new postings; already-scored rows keep their old scores until they are discovered again as new source IDs.</p>
 {% endif %}
@@ -53,7 +56,8 @@
     </label>
     <label>Location filter
       <select name="location_mode">
-        <option value="chicago-office" {% if profile.location_mode == 'chicago-office' %}selected{% endif %}>Chicago on-site or hybrid</option>
+        <option value="remote-hybrid-onsite" {% if profile.location_mode == 'remote-hybrid-onsite' %}selected{% endif %}>Remote, hybrid, or on-site (any city)</option>
+        <option value="chicago-office" {% if profile.location_mode == 'chicago-office' %}selected{% endif %}>Chicago on-site or hybrid only</option>
         <option value="any" {% if profile.location_mode == 'any' %}selected{% endif %}>No hard filter (score only)</option>
       </select>
     </label>

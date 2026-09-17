@@ -18,13 +18,13 @@ python3 -m app queued
 python3 -m app digest
 ```
 
-Say: these came from the New Grad Positions board, remote aggregators, and company career APIs (Palantir Lever, Anduril/Anthropic/Scale Greenhouse, OpenAI/Harvey Ashby). Title filter keeps AI Engineer and Forward Deployed Engineer; data-science titles are dropped. Location filter keeps Chicago on-site or hybrid only. Anything still queued cleared 72. ATS links are in the list; the agent does not submit the form.
+Say: these came from the New Grad Positions board, remote aggregators, and company career APIs (Palantir Lever, Anduril/Anthropic/Scale Greenhouse, OpenAI/Harvey Ashby). Title filter keeps AI Engineer and Forward Deployed Engineer; data-science titles are dropped. Location filter keeps remote, hybrid, and on-site in any city; Chicago is a scoring boost. Foreign on-site still reaches the scorer and is capped at 50. Anything queued cleared 72. ATS links are in the list; the agent does not submit the form.
 
 `--offline` is the **test fixture**, not the demo. Use it only if they ask “how do you test without the network?” — then run `pytest` and, if you want, `python3 -m app run --offline` to show a Senior 5+ years role getting capped.
 
 ## 2. Pipeline (3 min) — `app/pipeline.py`
 
-Discover every board independently (one timeout does not abort the others). Fallback to sample board. Title filter (AI Eng / FDE only). Location filter: Chicago office or hybrid (`app/geo.py`). Insert if new (`UNIQUE source, source_id`). Score. Tailor only the queued ones. Email only when the posting lists an address **and** autopilot is on. Digest is markdown; SMTP is optional.
+Discover every board independently (one timeout does not abort the others). Fallback to sample board. Title filter (AI Eng / FDE only). Location filter: remote / hybrid / on-site, any city (`app/geo.py`); chicago-office is opt-in. Insert if new (`UNIQUE source, source_id`). Score. Tailor only the queued ones. Email only when the posting lists an address **and** autopilot is on. Digest is markdown; SMTP is optional.
 
 ## 3. Why the filter is title-only (2 min) — `app/sources/filter.py`
 
@@ -50,4 +50,4 @@ Greenhouse/Lever/Workday/Easy Apply are not filled in. LinkedIn is a copy-paste 
 
 - **Why SQLite?** One candidate, one machine, no ops. WAL + a transaction for score+status.
 - **Why no LLM?** Every number in scoring is deterministic and tested. An LLM overlay that cannot override `Excluded` or raise a cap is a later addition, not the core.
-- **Work authorization / location?** Default filter is Chicago on-site or hybrid. NYC, remote-only, and London never reach the scorer. If you set `location_mode=any`, foreign on-site is still capped at 50.
+- **Work authorization / location?** Default filter keeps remote, hybrid, and on-site in any city. Scoring boosts Chicago / target cities and gives remote full location points. Foreign on-site is capped at 50, not dropped. `location_mode=chicago-office` restores the old Chicago-only hard filter.

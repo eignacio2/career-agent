@@ -16,7 +16,14 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
-from app.geo import foreign_onsite_label, is_chicago_office, is_remote, mentions_chicago
+from app.geo import (
+    foreign_onsite_label,
+    is_chicago_office,
+    is_remote,
+    matches_target_city,
+    mentions_chicago,
+    work_arrangement,
+)
 from app.models import ExperienceLevel, Job, Profile, Resume, ScoredMatch, SourceJob
 from app.sources.filter import assess_job_title
 
@@ -267,16 +274,27 @@ def _requires_foreign_authorization(job: Job, profile: Profile) -> str | None:
 
 
 def _location_fit(job: Job, profile: Profile) -> tuple[int, str]:
-    if is_chicago_office(job):
-        loc = job.location or "Chicago"
-        if "hybrid" in loc.lower():
-            return 16, f"Chicago hybrid ({loc}), which you can attend."
-        return 16, f"Chicago office ({loc}), which matches where you are."
-    if mentions_chicago(job):
-        return 4, "Names Chicago but reads as remote-only."
-    if is_remote(job):
-        return 2, "Remote-only; you are looking for a Chicago office or hybrid role."
-    return 2, f"On-site in {job.location}, not a Chicago office."
+    loc = job.location or "not stated"
+    arrangement = work_arrangement(job)
+    target = matches_target_city(job, profile)
+    chicago_office = is_chicago_office(job)
+
+    if chicago_office or (target and arrangement in ("hybrid", "onsite")):
+        kind = "hybrid" if arrangement == "hybrid" or "hybrid" in loc.lower() else "on-site"
+        return 16, f"{kind.capitalize()} in a target city ({loc})."
+
+    if arrangement == "remote" or is_remote(job):
+        if target or mentions_chicago(job):
+            return 16, f"Remote, with a target-city option ({loc})."
+        return 16, f"Remote ({loc})."
+
+    if target:
+        return 14, f"Mentions a target city ({loc})."
+    if arrangement == "hybrid":
+        return 12, f"Hybrid in {loc}."
+    if arrangement == "onsite":
+        return 8, f"On-site in {loc}."
+    return 10, f"Location not stated clearly ({loc})."
 
 
 def _salary_fit(job: Job, profile: Profile) -> tuple[int, str | None]:
