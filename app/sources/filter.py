@@ -1,8 +1,17 @@
-"""Title-only pre-filter for AI engineering and forward deployed roles."""
+"""Title-only pre-filter.
+
+Classification (`assess_job_title`) still labels a posting's family. The
+allowlist is the candidate's `target_titles`: a posting is kept if the title
+text matches one of those phrases, or if it is in the same well-defined family
+(AI engineering, forward deployed, data science) as a target. Adjacent titles
+such as generic Software Engineer match by phrase only, so a SWE search does
+not pull in every analyst programme.
+"""
 
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from app.models import JobRole, SourceJob
@@ -86,8 +95,17 @@ INTERNSHIP_TITLES = re.compile(
     re.I,
 )
 
-# Only these families are what this search is for.
-TARGET_ROLES = {"ai-engineering", "forward-deployed"}
+# Families that are specific enough to expand: listing "AI Engineer" also
+# keeps "Prompt Engineer" / "MLOps Engineer". Adjacent is not in this set.
+EXPANDABLE_FAMILIES: set[JobRole] = {"ai-engineering", "forward-deployed", "data-science"}
+
+# Expand these before phrase matching so "ML Engineer" hits "Machine Learning Engineer".
+TITLE_ABBREVIATIONS = {
+    "ml": "machine learning",
+    "mle": "machine learning engineer",
+    "fde": "forward deployed engineer",
+    "swe": "software engineer",
+}
 
 
 @dataclass(frozen=True)
@@ -147,10 +165,63 @@ def classify_role(job: SourceJob) -> JobRole:
     return assessment.role if assessment else "adjacent"
 
 
-def is_plausible_target(job: SourceJob, include_internships: bool = False) -> bool:
+def _normalize_title(value: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9+#. ]", " ", value.lower())
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _expand_title_phrases(value: str) -> str:
+    tokens: list[str] = []
+    for token in _normalize_title(value).split(" "):
+        if not token:
+            continue
+        tokens.extend(TITLE_ABBREVIATIONS.get(token, token).split(" "))
+    return " ".join(tokens)
+
+
+def title_matches_targets(job_title: str, target_titles: Iterable[str]) -> bool:
+    """True when the posting title is the same role as one of the listed targets."""
+    haystack = _expand_title_phrases(job_title)
+    if not haystack:
+        return False
+    for raw in target_titles:
+        needle = _expand_title_phrases(str(raw))
+        if len(needle) < 3:
+            continue
+        if needle in haystack:
+            return True
+        # "AI Engineer" vs target "Associate AI Engineer": the job is the core phrase.
+        if haystack in needle and len(haystack.split()) >= 2:
+            return True
+    return False
+
+
+def families_from_targets(target_titles: Iterable[str]) -> set[JobRole]:
+    families: set[JobRole] = set()
+    for raw in target_titles:
+        title = str(raw).strip()
+        if not title:
+            continue
+        assessment = assess_job_title(title)
+        if assessment:
+            families.add(assessment.role)
+    return families
+
+
+def is_plausible_target(
+    job: SourceJob,
+    target_titles: Iterable[str] = (),
+    include_internships: bool = False,
+) -> bool:
+    titles = [str(item).strip() for item in target_titles if str(item).strip()]
+    if not titles:
+        return False
+    if INTERNSHIP_TITLES.search(job.title or "") and not include_internships:
+        return False
+    if title_matches_targets(job.title, titles):
+        return True
     assessment = assess_job_title(job.title)
     if assessment is None:
         return False
-    if assessment.internship and not include_internships:
-        return False
-    return assessment.role in TARGET_ROLES
+    wanted = families_from_targets(titles) & EXPANDABLE_FAMILIES
+    return assessment.role in wanted

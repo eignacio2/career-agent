@@ -1,14 +1,14 @@
 # Career Agent
 
-Python job-search agent for **new-grad AI Engineer and Forward Deployed Engineer** roles.
+Python job-search agent. The bundled demo candidate is a **new-grad AI Engineer / Forward Deployed Engineer**; the title filter follows whatever target titles are on the profile.
 
-It discovers postings, drops anything that is not AI engineering or forward-deployed from the title, keeps **remote, hybrid, and on-site roles in any city**, scores them with year-requirement **caps** (not penalties), tailors a resume and cover letter from bullets you already have, emails an application when the posting lists an address, and otherwise prepares a pack for you to submit on Greenhouse/Lever/Workday. It writes a daily digest and a LinkedIn copy-paste pack. **It does not fill ATS forms.**
+It discovers postings, keeps titles that match those targets, keeps **remote, hybrid, and on-site roles in any city**, scores them with year-requirement **caps** (not penalties), tailors a resume and cover letter from bullets you already have, emails an application when the posting lists an address, and otherwise prepares a pack for you to submit on Greenhouse/Lever/Workday. It writes a daily digest and a LinkedIn copy-paste pack. **It does not fill ATS forms.**
 
-Classic data-science titles (Data Scientist, statistician, quant) are classified but **not queued**. Adjacent SWE / analyst programmes are dropped the same way.
+The demo profile does not list Data Scientist, so those titles are classified and dropped. Put Data Scientist on the profile and they are kept. Generic Software Engineer matches by phrase only, so it does not pull in every analyst programme.
 
 ## Resume bullets you can actually defend
 
-- Built a Python agent that discovers new-grad AI Engineer and Forward Deployed Engineer postings from public boards plus company career APIs, title-filters noise, keeps remote/hybrid/on-site roles (Chicago is a scoring boost, not a hard drop), and scores fit with a cap so a 5+ years role cannot clear a 72 apply threshold.
+- Built a Python agent that discovers postings from public boards plus company career APIs, title-filters against the candidate’s target roles, keeps remote/hybrid/on-site roles (Chicago is a scoring boost, not a hard drop), and scores fit with a cap so a 5+ years role cannot clear a 72 apply threshold.
 - Tailors a markdown resume and cover letter by reordering existing bullets (never invents employers or metrics); emails applications when a posting lists an address, otherwise queues an ATS pack for manual submit.
 - Writes a daily digest and a field-by-field LinkedIn update pack (headline/About/skills). LinkedIn is copy-paste; there is no unofficial write API.
 
@@ -75,6 +75,12 @@ Opt-in `location_mode=chicago-office` is the old Chicago office/hybrid hard filt
 
 `work_arrangement` and `location_allowed` live in `app/geo.py`.
 
+## Title filter
+
+The allowlist is `profile.target_titles`, not a hardcoded AI Eng / FDE set. A posting is kept when the title phrase matches a target, or when it is in the same expandable family (AI engineering, forward deployed, data science). Adjacent titles such as Software Engineer match by phrase only.
+
+`is_plausible_target` lives in `app/sources/filter.py`.
+
 ## What happens in one run
 
 ```
@@ -91,7 +97,7 @@ Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. Set `autopilot_ena
 
 - `tests/test_extract_years.py` — `4+ years` counts; “past 5 years” does not
 - `tests/test_score.py` — new-grad AI Engineer / FDE clears 72; 5+ years senior is capped below it
-- `tests/test_filter.py` — Data Scientist and Office Assistant never reach the scorer as targets
+- `tests/test_filter.py` — Ethan’s titles drop Data Scientist and Office Assistant; a Data Scientist profile keeps DS titles
 - `tests/test_location.py` — remote, Denver hybrid, and London on-site are kept; chicago-office mode still drops Remote (US) and NYC
 - `tests/test_tailor.py` — tailored resume still contains Wayfair, never invents employers
 - `tests/test_linkedin.py` — headline drops “seeking internship” / Microsoft Office

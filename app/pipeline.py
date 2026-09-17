@@ -149,7 +149,11 @@ def _run(
         title_ok = [
             job
             for job in discovery.jobs
-            if is_plausible_target(job, include_internships=profile.include_internships)
+            if is_plausible_target(
+                job,
+                profile.target_titles,
+                include_internships=profile.include_internships,
+            )
         ]
         plausible: list = []
         dropped_location = 0
@@ -159,11 +163,14 @@ def _run(
                 plausible.append(job)
             else:
                 dropped_location += 1
+        title_preview = ", ".join(profile.target_titles[:3]) or "no target titles"
+        if len(profile.target_titles) > 3:
+            title_preview += f" +{len(profile.target_titles) - 3} more"
         log.add(
             "filter",
             (
                 f"{len(title_ok)} of {len(discovery.jobs)} postings passed the title pre-filter "
-                f"(AI Engineer / Forward Deployed). "
+                f"({title_preview}). "
                 f"{len(plausible)} also passed the location filter "
                 f"({profile.location_mode}); dropped {dropped_location} on location."
             ),

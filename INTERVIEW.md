@@ -18,17 +18,17 @@ python3 -m app queued
 python3 -m app digest
 ```
 
-Say: these came from the New Grad Positions board, remote aggregators, and company career APIs (Palantir Lever, Anduril/Anthropic/Scale Greenhouse, OpenAI/Harvey Ashby). Title filter keeps AI Engineer and Forward Deployed Engineer; data-science titles are dropped. Location filter keeps remote, hybrid, and on-site in any city; Chicago is a scoring boost. Foreign on-site still reaches the scorer and is capped at 50. Anything queued cleared 72. ATS links are in the list; the agent does not submit the form.
+Say: these came from the New Grad Positions board, remote aggregators, and company career APIs (Palantir Lever, Anduril/Anthropic/Scale Greenhouse, OpenAI/Harvey Ashby). Title filter uses the profile’s target titles (demo: AI Engineer and Forward Deployed Engineer). Data-science titles are dropped unless you list them. Location filter keeps remote, hybrid, and on-site in any city; Chicago is a scoring boost. Foreign on-site still reaches the scorer and is capped at 50. Anything queued cleared 72. ATS links are in the list; the agent does not submit the form.
 
 `--offline` is the **test fixture**, not the demo. Use it only if they ask “how do you test without the network?” — then run `pytest` and, if you want, `python3 -m app run --offline` to show a Senior 5+ years role getting capped.
 
 ## 2. Pipeline (3 min) — `app/pipeline.py`
 
-Discover every board independently (one timeout does not abort the others). Fallback to sample board. Title filter (AI Eng / FDE only). Location filter: remote / hybrid / on-site, any city (`app/geo.py`); chicago-office is opt-in. Insert if new (`UNIQUE source, source_id`). Score. Tailor only the queued ones. Email only when the posting lists an address **and** autopilot is on. Digest is markdown; SMTP is optional.
+Discover every board independently (one timeout does not abort the others). Fallback to sample board. Title filter from `profile.target_titles` (`app/sources/filter.py`). Location filter: remote / hybrid / on-site, any city (`app/geo.py`); chicago-office is opt-in. Insert if new (`UNIQUE source, source_id`). Score. Tailor only the queued ones. Email only when the posting lists an address **and** autopilot is on. Digest is markdown; SMTP is optional.
 
 ## 3. Why the filter is title-only (2 min) — `app/sources/filter.py`
 
-Body text said “agent” on an office assistant posting. Title allowlist is cheaper and stricter. Data Scientist titles are classified but not queued — this search is AI Engineer and Forward Deployed Engineer. Internships are off by default.
+Body text said “agent” on an office assistant posting. Title allowlist is cheaper and stricter, and it reads the profile’s target titles rather than a hardcoded family. The demo lists AI Engineer and FDE, so Data Scientist is classified and not queued; a profile that lists Data Scientist keeps those titles. Internships are off by default.
 
 ## 4. Caps, not penalties (4 min) — `app/scoring/score.py` + `tests/test_score.py`
 

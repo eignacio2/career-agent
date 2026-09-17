@@ -69,7 +69,8 @@
 
   <fieldset>
     <legend>Search (comma-separated)</legend>
-    <label class="full">Target titles <input name="target_titles" value="{{ profile.target_titles | join(', ') }}"></label>
+    <label class="full">Target titles <input name="target_titles" value="{{ profile.target_titles | join(', ') }}" placeholder="AI Engineer, Forward Deployed Engineer"></label>
+    <p class="muted full">The title filter keeps postings that match these phrases. Listing AI Engineer, Forward Deployed Engineer, or Data Scientist also keeps other titles in that family. A generic Software Engineer listing matches by phrase only.</p>
     <label class="full">Skills you actually have <input name="skills" value="{{ profile.skills | join(', ') }}"></label>
     <label class="full">Target locations <input name="target_locations" value="{{ profile.target_locations | join(', ') }}"></label>
     <label class="full">Excluded companies <input name="excluded_companies" value="{{ profile.excluded_companies | join(', ') }}"></label>

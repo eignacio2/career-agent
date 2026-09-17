@@ -25,7 +25,7 @@ from app.geo import (
     work_arrangement,
 )
 from app.models import ExperienceLevel, Job, Profile, Resume, ScoredMatch, SourceJob
-from app.sources.filter import assess_job_title
+from app.sources.filter import assess_job_title, title_matches_targets
 
 SKILL_VOCABULARY = [
     "python", "sql", "r", "scala", "java", "typescript", "javascript", "go", "rust", "bash",
@@ -381,7 +381,8 @@ def score_heuristically(job: Job, profile: Profile, resume: Resume) -> ScoredMat
     level_pts, level_note, level_gap, level_cap = _level_fit(job, profile)
     loc_pts, loc_note = _location_fit(job, profile)
     sal_pts, sal_note = _salary_fit(job, profile)
-    family_adjustment = -14 if job.role_family == "adjacent" else 6
+    title_hit = title_matches_targets(job.title, profile.target_titles)
+    family_adjustment = -14 if job.role_family == "adjacent" and not title_hit else 6
 
     raw = title_pts + skill_pts + level_pts + loc_pts + sal_pts + family_adjustment
 
@@ -406,8 +407,8 @@ def score_heuristically(job: Job, profile: Profile, resume: Resume) -> ScoredMat
         reasons.append(
             f"This role is on-site in {job.location}, outside the countries you are targeting."
         )
-    if job.role_family == "adjacent":
-        gaps.append("Reads as adjacent work rather than an AI engineering or forward deployed role.")
+    if job.role_family == "adjacent" and not title_hit:
+        gaps.append("Reads as adjacent work rather than one of your target titles.")
 
     return ScoredMatch(score=score, verdict=_verdict_for(score), reasons=reasons, gaps=gaps)
 

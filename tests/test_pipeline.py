@@ -1,4 +1,5 @@
 from app.pipeline import run_agent
+from app.profile import DEFAULT_PROFILE, DEFAULT_RESUME
 from app.setup import SetupIncomplete
 from app.sources.sample import SampleSource
 
@@ -74,6 +75,27 @@ def test_offline_run_queues_new_grad_and_caps_senior(tmp_db_ready):
     sample_titles = {job.title for job in SampleSource().fetch([], 25)}
     assert "Office Assistant — AI Lab Admin" in sample_titles
     assert "Data Scientist I (New Grad)" in sample_titles
+
+
+def test_offline_run_keeps_data_science_when_those_titles_are_listed(tmp_db):
+    profile = DEFAULT_PROFILE.model_copy(
+        update={
+            "full_name": "Alex Example",
+            "email": "alex@example.com",
+            "target_titles": ["Data Scientist"],
+        }
+    )
+    tmp_db.save_profile(profile)
+    tmp_db.save_resume(DEFAULT_RESUME)
+    result = run_agent(trigger="test", offline=True, limit_per_source=25)
+    assert result["status"] == "success"
+    titles = {job.title for job in tmp_db.list_jobs(limit=50)}
+    assert "Data Scientist I (New Grad)" in titles
+    assert "Senior Data Scientist, Demand Forecasting" in titles
+    assert "Data Scientist" in titles  # Neckar Stuttgart — stored, then visa-capped
+    assert "Associate AI Engineer, University Graduate" not in titles
+    assert "Forward Deployed Engineer, New Grad" not in titles
+    assert "Office Assistant — AI Lab Admin" not in titles
 
 
 def test_second_run_is_idempotent(tmp_db_ready):

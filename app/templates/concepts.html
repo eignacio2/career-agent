@@ -15,7 +15,7 @@
     <dt>SourceJob → Job → scored Job</dt>
     <dd>A board returns a SourceJob. Inserting it assigns an id and makes it a Job. Scoring writes score fields onto that same row. There is no separate “Match” table — the score lives on the job because a job has one candidate.</dd>
     <dt>Title pre-filter before scoring</dt>
-    <dd>Boards return keyword soup. Matching the body is how “Office Assistant — AI Lab Admin” looked like an agents role. The allowlist is title-only and currently keeps AI Engineer and Forward Deployed Engineer — data-science titles never pay a scoring pass.</dd>
+    <dd>Boards return keyword soup. Matching the body is how “Office Assistant — AI Lab Admin” looked like an agents role. The allowlist is title-only and comes from the profile’s target titles. AI / FDE / data-science families expand; generic Software Engineer does not pull in every analyst posting.</dd>
     <dt>Location pre-filter</dt>
     <dd>Default keeps remote, hybrid, and on-site in any city. Unknown arrangement is kept so a missing location string is not a silent drop. Chicago-office is an opt-in. Foreign on-site still reaches the scorer and is capped at 50.</dd>
     <dt>allSettled, not all</dt>

@@ -208,3 +208,18 @@ def test_short_skill_r_does_not_match_route():
     skills = extract_job_skills(job)
     assert "r" not in skills
     assert "python" in skills
+
+
+def test_targeted_swe_is_not_treated_as_adjacent_penalty():
+    profile = DEFAULT_PROFILE.model_copy(update={"target_titles": ["Software Engineer"]})
+    job = make_job(
+        title="Software Engineer, University Graduate",
+        early_career=True,
+        role_family="adjacent",
+        remote=True,
+        location="Remote (US)",
+        description="Graduating within the year. Strong coding.",
+        tags=["java"],
+    )
+    match = score_heuristically(job, profile, DEFAULT_RESUME)
+    assert not any("adjacent" in gap.lower() for gap in match.gaps)
