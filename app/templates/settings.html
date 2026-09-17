@@ -24,7 +24,8 @@
     <label>Phone <input name="phone" value="{{ profile.phone }}"></label>
     <label>Location <input name="location" value="{{ profile.location }}"></label>
     <label>Headline <input name="headline" value="{{ profile.headline }}"></label>
-    <label>LinkedIn <input name="linkedin_url" value="{{ profile.linkedin_url }}"></label>
+    <label class="full">LinkedIn URL <input name="linkedin_url" value="{{ profile.linkedin_url }}" placeholder="https://www.linkedin.com/in/…"></label>
+    <p class="muted full">The URL is stored only. This agent never fetches or writes a LinkedIn profile. Paste a snapshot below so the copy-paste pack can diff against what is actually on the page.</p>
     <label>GitHub <input name="github_url" value="{{ profile.github_url }}"></label>
     <label class="full">Summary <textarea name="summary" rows="4">{{ profile.summary }}</textarea></label>
   </fieldset>
@@ -75,6 +76,47 @@
     <label class="full">Target locations <input name="target_locations" value="{{ profile.target_locations | join(', ') }}"></label>
     <label class="full">Excluded companies <input name="excluded_companies" value="{{ profile.excluded_companies | join(', ') }}"></label>
     <label class="full">Excluded keywords <input name="excluded_keywords" value="{{ profile.excluded_keywords | join(', ') }}"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Resume (paste, not a PDF)</legend>
+    <p class="muted full">Paste the text of your resume. The agent extracts employers and bullets that appear in the paste; it will not invent a company. Leave this box empty to keep the stored resume. No PDF upload in this step — PDFs mangle two-column layouts.</p>
+    {% if resume.experience or resume.basics.name %}
+    <div class="full">
+      <p class="muted">Stored resume</p>
+      <ul>
+        {% if resume.basics.name %}<li>{{ resume.basics.name }}{% if resume.basics.email %} · {{ resume.basics.email }}{% endif %}</li>{% endif %}
+        {% for role in resume.experience %}
+        <li>{{ role.role }}{% if role.company %} — {{ role.company }}{% endif %} ({{ role.bullets|length }} bullets)</li>
+        {% endfor %}
+        {% if not resume.experience %}<li>No experience entries stored.</li>{% endif %}
+      </ul>
+    </div>
+    {% endif %}
+    <label class="full">Resume text
+      <textarea name="resume_paste" rows="10" placeholder="Name&#10;email@example.com&#10;&#10;Experience&#10;Role — Company&#10;- bullet already on your resume"></textarea>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>LinkedIn snapshot (what is on the profile now)</legend>
+    <p class="muted full">Copy the current headline, About, and skills from LinkedIn. The pack diffs against this, not against a live fetch.</p>
+    <label class="full">Current headline <input name="li_headline" value="{{ snapshot.headline }}"></label>
+    <label class="full">Current About <textarea name="li_about" rows="5">{{ snapshot.about }}</textarea></label>
+    <label class="full">Current skills (comma-separated, pin order) <input name="li_skills" value="{{ snapshot.skills | join(', ') }}"></label>
+    <label>Open to work banner <input name="li_open_to_work" value="{{ snapshot.open_to_work }}"></label>
+    <label class="check">
+      <input type="checkbox" name="li_has_experience" {% if snapshot.has_experience_section %}checked{% endif %}>
+      Experience section is already on LinkedIn
+    </label>
+    <label class="check">
+      <input type="checkbox" name="li_has_certifications" {% if snapshot.has_certifications_section %}checked{% endif %}>
+      Certifications section is already on LinkedIn
+    </label>
+    <label class="full">Or paste a labeled dump
+      <textarea name="li_snapshot_paste" rows="6" placeholder="Headline: …&#10;About: …&#10;Skills: Python, SQL&#10;Open to work: Hybrid&#10;Experience section: no"></textarea>
+    </label>
+    <p class="muted full">If the labeled dump is filled and the fields above are empty, the dump is parsed instead.</p>
   </fieldset>
 
   <button type="submit">Save profile</button>

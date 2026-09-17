@@ -8,6 +8,8 @@ Living notes for the Python rewrite. The in-app page `/concepts` is the short ve
 | --- | --- |
 | `SourceJob → Job → scored Job` | A board has no id in *our* database. Inserting is the moment a posting becomes ours. Score fields hang on the job because there is one candidate. |
 | Title pre-filter | Body matching pulled in “Office Assistant — AI Lab Admin”. Titles are the only reliable signal. The allowlist is the candidate’s target titles; AI / FDE / DS families expand. |
+| Resume paste | Structured resume comes from text you paste. Parser extracts; it does not invent employers. |
+| LinkedIn snapshot | Pack diffs against pasted headline/About/skills. No URL fetch, no unofficial write. |
 | Location pre-filter | Default keeps remote, hybrid, and on-site (any city). Scoring boosts target cities; foreign on-site is a cap, not a drop. |
 | Fan-out with isolation | One timed-out board must not abort discovery. Empty live results → sample board. |
 | Caps vs penalties | Penalties still clear a 72 threshold. Caps do not. Use caps for screen-outs (years, staff, foreign on-site). |

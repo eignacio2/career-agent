@@ -13,8 +13,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app import db
 from app.config import CRON_SECRET
-from app.models import Profile
+from app.linkedin import parse_linkedin_snapshot
+from app.models import LinkedInSnapshot, Profile
 from app.pipeline import RunInProgress, run_agent
+from app.resume_parse import merge_profile_from_resume, parse_resume
 from app.setup import SetupIncomplete, missing_setup_fields
 
 ROOT = Path(__file__).resolve().parent
@@ -38,8 +40,11 @@ app.add_middleware(NoCacheHTML)
 def _ctx(**extra):
     profile = db.get_profile()
     missing = missing_setup_fields(profile)
+    resume = db.get_resume()
     return {
         "profile": profile,
+        "resume": resume,
+        "snapshot": db.get_snapshot(),
         "counts": db.count_jobs(),
         "latest_run": db.latest_run(),
         "setup_missing": missing,
@@ -113,6 +118,14 @@ def save_settings(
     excluded_companies: Annotated[str, Form()] = "",
     excluded_keywords: Annotated[str, Form()] = "",
     auto_apply_threshold: Annotated[int, Form()] = 72,
+    resume_paste: Annotated[str, Form()] = "",
+    li_headline: Annotated[str, Form()] = "",
+    li_about: Annotated[str, Form()] = "",
+    li_skills: Annotated[str, Form()] = "",
+    li_open_to_work: Annotated[str, Form()] = "",
+    li_has_experience: Annotated[str, Form()] = "off",
+    li_has_certifications: Annotated[str, Form()] = "off",
+    li_snapshot_paste: Annotated[str, Form()] = "",
 ):
     current = db.get_profile()
     years = None
@@ -151,6 +164,24 @@ def save_settings(
         }
     )
     db.save_profile(Profile.model_validate(updated.model_dump()))
+
+    if resume_paste.strip():
+        parsed = parse_resume(resume_paste)
+        if parsed.resume.experience or parsed.resume.skill_groups or parsed.resume.basics.summary:
+            db.save_resume(parsed.resume)
+            db.save_profile(merge_profile_from_resume(db.get_profile(), parsed.resume))
+
+    snapshot = LinkedInSnapshot(
+        headline=li_headline.strip(),
+        about=li_about.strip(),
+        skills=_csv(li_skills),
+        open_to_work=li_open_to_work.strip(),
+        has_experience_section=li_has_experience in {"on", "true", "1"},
+        has_certifications_section=li_has_certifications in {"on", "true", "1"},
+    )
+    if li_snapshot_paste.strip() and not snapshot.headline and not snapshot.about:
+        snapshot = parse_linkedin_snapshot(li_snapshot_paste)
+    db.save_snapshot(snapshot)
     return RedirectResponse("/settings?saved=1", status_code=303)
 
 

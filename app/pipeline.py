@@ -323,7 +323,7 @@ def _run(
 
         if refresh_linkedin:
             market = db.list_jobs(limit=60)
-            pack = generate_linkedin_pack(profile, resume, market)
+            pack = generate_linkedin_pack(profile, resume, market, db.get_snapshot())
             db.save_linkedin_pack(pack)
             pack_path = Path(config.DATA_DIR) / "linkedin-pack.md"
             pack_path.write_text(render_linkedin_markdown(pack), encoding="utf-8")

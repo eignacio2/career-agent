@@ -6,7 +6,8 @@
     python -m app digest
     python -m app linkedin
     python -m app status
-    python -m app send 3
+    python -m app load-resume path.txt
+    python -m app load-linkedin path.txt
 """
 
 from __future__ import annotations
@@ -17,9 +18,11 @@ from pathlib import Path
 
 from app import db
 from app.apply import submit_by_email
+from app.linkedin import parse_linkedin_snapshot
 from app.models import TailoredApplication
 from app.pipeline import RunInProgress, run_agent
 from app.profile import DEMO_PROFILE, DEMO_RESUME
+from app.resume_parse import merge_profile_from_resume, parse_resume
 from app.setup import SetupIncomplete, missing_setup_fields
 from app.tailor import tailor_application
 
@@ -140,6 +143,15 @@ def cmd_status(_args: argparse.Namespace) -> int:
     print(f"{label}  ·  {profile.experience_level}  ·  ceiling {profile.max_years_required} yrs")
     print(f"Threshold {profile.auto_apply_threshold}  ·  autopilot {profile.autopilot_enabled}")
     print(f"Target titles: {', '.join(profile.target_titles) or '(none)'}")
+    resume = db.get_resume()
+    roles = len(resume.experience)
+    bullets = sum(len(role.bullets) for role in resume.experience)
+    print(f"Resume: {roles} experience {'entry' if roles == 1 else 'entries'}, {bullets} bullets")
+    snapshot = db.get_snapshot()
+    if snapshot.headline:
+        print(f"LinkedIn snapshot: {snapshot.headline[:80]}")
+    else:
+        print("LinkedIn snapshot: (none pasted)")
     print(f"Jobs: {counts}")
     if run:
         print(f"Last run #{run.id} {run.status} at {run.started_at}  stats={run.stats.model_dump()}")
@@ -148,11 +160,46 @@ def cmd_status(_args: argparse.Namespace) -> int:
 
 def cmd_load_demo(_args: argparse.Namespace) -> int:
     """Install the bundled Ethan Ignacio profile so the sample search is runnable."""
+    from app.linkedin import DEMO_SNAPSHOT
+
     db.save_profile(DEMO_PROFILE)
     db.save_resume(DEMO_RESUME)
+    db.save_snapshot(DEMO_SNAPSHOT)
     print("Loaded the demo candidate (Ethan Ignacio, AI Engineer / FDE, remote/hybrid/on-site).")
-    print("This overwrites the profile and resume in this database.")
+    print("This overwrites the profile, resume, and LinkedIn snapshot in this database.")
     print("Next: python -m app run")
+    return 0
+
+
+def cmd_load_resume(args: argparse.Namespace) -> int:
+    path = Path(args.path)
+    if not path.is_file():
+        print(f"No file {path}", file=sys.stderr)
+        return 1
+    parsed = parse_resume(path.read_text(encoding="utf-8"))
+    if not parsed.resume.experience and not parsed.resume.skill_groups and not parsed.resume.basics.name:
+        print("Nothing usable parsed. Existing resume left unchanged.", file=sys.stderr)
+        for note in parsed.notes:
+            print(note, file=sys.stderr)
+        return 1
+    db.save_resume(parsed.resume)
+    db.save_profile(merge_profile_from_resume(db.get_profile(), parsed.resume))
+    print(f"Stored resume from {path}")
+    for note in parsed.notes:
+        print(f"  {note}")
+    return 0
+
+
+def cmd_load_linkedin(args: argparse.Namespace) -> int:
+    path = Path(args.path)
+    if not path.is_file():
+        print(f"No file {path}", file=sys.stderr)
+        return 1
+    snapshot = parse_linkedin_snapshot(path.read_text(encoding="utf-8"))
+    db.save_snapshot(snapshot)
+    print(f"Stored LinkedIn snapshot from {path}")
+    print(f"  Headline: {snapshot.headline or '(none)'}")
+    print(f"  Skills: {', '.join(snapshot.skills) or '(none)'}")
     return 0
 
 
@@ -245,6 +292,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Load the bundled Ethan Ignacio profile (overwrites this database's candidate)",
     )
     demo.set_defaults(func=cmd_load_demo)
+
+    load_resume = sub.add_parser(
+        "load-resume",
+        help="Parse a pasted resume text file into the stored resume (does not invent employers)",
+    )
+    load_resume.add_argument("path")
+    load_resume.set_defaults(func=cmd_load_resume)
+
+    load_li = sub.add_parser(
+        "load-linkedin",
+        help="Store a LinkedIn snapshot from a labeled text file (never fetches a URL)",
+    )
+    load_li.add_argument("path")
+    load_li.set_defaults(func=cmd_load_linkedin)
 
     show = sub.add_parser("show", help="One job, with score reasons")
     show.add_argument("job_id", type=int)

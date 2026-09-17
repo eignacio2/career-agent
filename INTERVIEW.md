@@ -40,7 +40,7 @@ A −20 penalty on an 88 still clears threshold 72. A **cap of 45** cannot. Year
 
 ## 5. Tailoring (2 min) — `app/tailor.py`
 
-Reorders existing bullets by overlap with the posting. Hard rule: never invent employers, dates, or metrics. Show `tests/test_tailor.py`.
+Reorders existing bullets by overlap with the posting. Hard rule: never invent employers, dates, or metrics. The source resume is whatever was pasted (or `load-demo`). Show `tests/test_tailor.py` and `tests/test_resume_parse.py`.
 
 ## 6. What you did not automate (1 min)
 

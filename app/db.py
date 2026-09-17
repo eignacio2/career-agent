@@ -27,6 +27,7 @@ from app.models import (
     JobRole,
     JobStatus,
     LinkedInPack,
+    LinkedInSnapshot,
     Profile,
     Resume,
     RunLogEntry,
@@ -167,6 +168,12 @@ def _migrate(conn: sqlite3.Connection) -> None:
           data TEXT NOT NULL,
           created_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS linkedin_snapshot (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          data TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
         """
     )
     conn.commit()
@@ -187,6 +194,12 @@ def _seed_if_empty(conn: sqlite3.Connection) -> None:
         conn.execute(
             "INSERT INTO resume (id, data, updated_at) VALUES (1, ?, ?)",
             (blank_resume().model_dump_json(), now_iso()),
+        )
+    row = conn.execute("SELECT id FROM linkedin_snapshot WHERE id = 1").fetchone()
+    if row is None:
+        conn.execute(
+            "INSERT INTO linkedin_snapshot (id, data, updated_at) VALUES (1, ?, ?)",
+            (LinkedInSnapshot().model_dump_json(), now_iso()),
         )
     conn.commit()
 
@@ -230,6 +243,18 @@ def _refresh_stale_search_defaults(conn: sqlite3.Connection) -> None:
             (json.dumps(data), now_iso()),
         )
         conn.commit()
+    if name == "ethan ignacio":
+        snap_row = conn.execute("SELECT data FROM linkedin_snapshot WHERE id = 1").fetchone()
+        if snap_row is not None:
+            snap = json.loads(snap_row["data"])
+            if not str(snap.get("headline") or "").strip():
+                from app.linkedin import DEMO_SNAPSHOT
+
+                conn.execute(
+                    "UPDATE linkedin_snapshot SET data = ?, updated_at = ? WHERE id = 1",
+                    (DEMO_SNAPSHOT.model_dump_json(), now_iso()),
+                )
+                conn.commit()
 
 
 def get_profile() -> Profile:
@@ -258,6 +283,22 @@ def save_resume(resume: Resume) -> Resume:
     )
     get_conn().commit()
     return resume
+
+
+def get_snapshot() -> LinkedInSnapshot:
+    row = get_conn().execute("SELECT data FROM linkedin_snapshot WHERE id = 1").fetchone()
+    if row is None:
+        return LinkedInSnapshot()
+    return LinkedInSnapshot.model_validate_json(row["data"])
+
+
+def save_snapshot(snapshot: LinkedInSnapshot) -> LinkedInSnapshot:
+    get_conn().execute(
+        "UPDATE linkedin_snapshot SET data = ?, updated_at = ? WHERE id = 1",
+        (snapshot.model_dump_json(), now_iso()),
+    )
+    get_conn().commit()
+    return snapshot
 
 
 def _job_from_row(row: sqlite3.Row) -> Job:

@@ -1,19 +1,20 @@
 """LinkedIn copy-paste pack.
 
 LinkedIn has no official write API for this. The agent produces headline,
-About, skills, and a field-by-field change list. You paste. The snapshot
-below is the last known public state of Ethan's profile so the diffs are
-specific rather than generic advice.
+About, skills, and a field-by-field change list. You paste. Diffs are against
+the snapshot stored for this candidate — never fetched from a profile URL.
 """
 
 from __future__ import annotations
 
+import re
+
 from app.models import Job, LinkedInChange, LinkedInPack, LinkedInSnapshot, Profile, Resume
 from app.scoring.score import extract_job_skills
 
-# Public issues already identified on the live profile. Update this if you
-# paste a newer snapshot; do not invent a cleaner current profile.
-CURRENT_SNAPSHOT = LinkedInSnapshot(
+# Known public state of the demo profile. Loaded by `python -m app load-demo`.
+# Do not use this as a fallback for other candidates.
+DEMO_SNAPSHOT = LinkedInSnapshot(
     headline="Computer Science Student | Seeking Software Engineering Internship | Microsoft Office",
     about=(
         "I am a student building my confidence. Growing up my family supported "
@@ -24,6 +25,71 @@ CURRENT_SNAPSHOT = LinkedInSnapshot(
     has_experience_section=False,
     has_certifications_section=False,
 )
+
+# Kept so existing tests and interview notes can still import the old name.
+CURRENT_SNAPSHOT = DEMO_SNAPSHOT
+
+SNAPSHOT_LABEL = re.compile(
+    r"^(headline|about|skills|open to work|open-to-work|experience section|"
+    r"certifications? section)\s*:\s*(.*)$",
+    re.I,
+)
+YES = {"yes", "y", "true", "1", "on"}
+
+
+def blank_snapshot() -> LinkedInSnapshot:
+    return LinkedInSnapshot()
+
+
+def parse_linkedin_snapshot(text: str) -> LinkedInSnapshot:
+    """Read a labeled paste. Unknown text is treated as About, not as Ethan's profile."""
+    raw = (text or "").replace("\r\n", "\n")
+    if not raw.strip():
+        return blank_snapshot()
+    current = "about"
+    chunks: dict[str, list[str]] = {"headline": [], "about": [], "skills": [], "open_to_work": [], "experience": [], "certs": []}
+    alias = {
+        "headline": "headline",
+        "about": "about",
+        "skills": "skills",
+        "open to work": "open_to_work",
+        "open-to-work": "open_to_work",
+        "experience section": "experience",
+        "certification section": "certs",
+        "certifications section": "certs",
+    }
+    for line in raw.split("\n"):
+        match = SNAPSHOT_LABEL.match(line.strip())
+        if match:
+            current = alias.get(match.group(1).lower(), "about")
+            rest = match.group(2).strip()
+            if rest:
+                chunks.setdefault(current, []).append(rest)
+            continue
+        chunks.setdefault(current, []).append(line)
+    headline = " ".join(part.strip() for part in chunks.get("headline", []) if part.strip())
+    about = "\n".join(chunks.get("about", [])).strip()
+    skills_raw = " ".join(chunks.get("skills", []))
+    skills = [part.strip() for part in re.split(r"[,;\n]", skills_raw) if part.strip()]
+    open_to = " ".join(part.strip() for part in chunks.get("open_to_work", []) if part.strip())
+    exp_raw = " ".join(chunks.get("experience", [])).strip().lower()
+    cert_raw = " ".join(chunks.get("certs", [])).strip().lower()
+    has_experience = any(token in exp_raw for token in YES) or exp_raw in {"present", "added"}
+    has_certs = any(token in cert_raw for token in YES) or cert_raw in {"present", "added"}
+    if not headline and not about and not skills and not open_to:
+        # Unlabeled paste: first short line is headline, the rest is About.
+        nonempty = [line.strip() for line in raw.split("\n") if line.strip()]
+        if nonempty and len(nonempty[0]) <= 220 and ":" not in nonempty[0][:12]:
+            headline = nonempty[0]
+            about = "\n".join(nonempty[1:]).strip()
+    return LinkedInSnapshot(
+        headline=headline,
+        about=about,
+        skills=skills,
+        open_to_work=open_to,
+        has_experience_section=has_experience,
+        has_certifications_section=has_certs,
+    )
 
 WEAK_HEADLINE = [
     ("microsoft office", "Listing office software on a technical profile wastes recruiter-search keywords."),
@@ -67,14 +133,33 @@ def _diff(snapshot: LinkedInSnapshot, pack: LinkedInPack, profile: Profile, resu
     headline = snapshot.headline.strip()
     lowered = headline.lower()
     problems = [why for phrase, why in WEAK_HEADLINE if phrase in lowered]
-    mentions_target = any(
-        word in lowered
-        for word in ("ai", "ml", "machine learning", "llm", "forward deployed", "fde")
-    )
-    if headline and (problems or not mentions_target):
-        if not mentions_target:
+    mentions_target = False
+    needles: list[str] = []
+    for target in profile.target_titles:
+        lowered_target = target.lower().strip()
+        if lowered_target:
+            needles.append(lowered_target)
+            needles.extend(
+                word
+                for word in re.split(r"[^a-z0-9]+", lowered_target)
+                if len(word) > 2 and word not in {"the", "and", "for", "with"}
+            )
+    if needles:
+        mentions_target = any(needle in lowered for needle in needles)
+    if not headline:
+        changes.append(
+            LinkedInChange(
+                field="Headline",
+                current="(no snapshot pasted)",
+                proposed=pack.headline,
+                why="Paste your current LinkedIn headline so this pack can diff against it. Until then, here is what to put there.",
+                severity="recommended",
+            )
+        )
+    elif problems or (needles and not mentions_target):
+        if needles and not mentions_target:
             problems.append(
-                "The headline never says AI, ML, or forward deployed, so you miss recruiter searches for those roles."
+                "The headline never names one of your target titles, so you miss recruiter searches for those roles."
             )
         changes.append(
             LinkedInChange(
@@ -93,7 +178,12 @@ def _diff(snapshot: LinkedInSnapshot, pack: LinkedInPack, profile: Profile, resu
                 field="Experience section",
                 current="No experience entries on your profile",
                 proposed=f"Add {role.role} at {role.company} ({role.start} to {role.end})",
-                why="Recruiter search filters on titles held. An empty Experience section hides the Wayfair externship.",
+                why=(
+                    f"Recruiter search filters on titles held. An empty Experience section hides "
+                    f"{role.role} at {role.company}."
+                    if role.company
+                    else f"Recruiter search filters on titles held. An empty Experience section hides {role.role}."
+                ),
                 severity="critical",
             )
         )
@@ -107,7 +197,7 @@ def _diff(snapshot: LinkedInSnapshot, pack: LinkedInPack, profile: Profile, resu
             about_problems.append("The origin story occupies the lines LinkedIn shows before See more.")
         if "microsoft office" in about.lower():
             about_problems.append("Microsoft Office should be cut from About.")
-        if resume.experience and resume.experience[0].company.lower() not in about.lower():
+        if resume.experience and resume.experience[0].company and resume.experience[0].company.lower() not in about.lower():
             about_problems.append(f"It does not mention {resume.experience[0].company}, your strongest credential.")
         if about_problems:
             changes.append(
@@ -155,7 +245,11 @@ def _diff(snapshot: LinkedInSnapshot, pack: LinkedInPack, profile: Profile, resu
                 field="Licenses & certifications",
                 current="No certifications section",
                 proposed="; ".join(resume.certifications),
-                why="AWS CCP is on the resume and missing from LinkedIn. It is a searchable field.",
+                why=(
+                    f"{'; '.join(resume.certifications)} "
+                    f"{'is' if len(resume.certifications) == 1 else 'are'} on the resume "
+                    "and missing from LinkedIn. It is a searchable field."
+                ),
                 severity="recommended",
             )
         )
@@ -168,15 +262,20 @@ def generate_linkedin_pack(
     jobs: list[Job],
     snapshot: LinkedInSnapshot | None = None,
 ) -> LinkedInPack:
-    snapshot = snapshot or CURRENT_SNAPSHOT
+    snapshot = snapshot if snapshot is not None else LinkedInSnapshot()
     owned = {skill.lower() for skill in [*profile.skills, *[i for g in resume.skill_groups for i in g.items]]}
     demand = _market_demand(jobs)
     validated = [(skill, count) for skill, count in demand if skill.lower() in owned]
     gaps = [(skill, count) for skill, count in demand if skill.lower() not in owned][:6]
     casing = _casing(profile, resume)
 
-    titles = " / ".join(profile.target_titles[:2]) or "AI Engineer"
+    titles = " / ".join(profile.target_titles[:2]) or (profile.headline.split("·")[0].strip() if profile.headline else "Target role")
     headline_skills = [_display(skill, casing) for skill, _ in validated[:4]]
+    city = ""
+    if profile.target_locations:
+        city = profile.target_locations[0]
+    elif profile.location:
+        city = profile.location.split("·")[0].strip()
     if profile.location_mode == "chicago-office":
         arrangement = "Hybrid or on-site in Chicago"
         open_to_place = "Hybrid or on-site in Chicago, IL"
@@ -184,8 +283,13 @@ def generate_linkedin_pack(
     else:
         arrangement = "Remote, hybrid, or on-site"
         open_to_place = "Remote, hybrid, or on-site"
-        about_place = "remote, hybrid, or on-site (Chicago is a plus)"
-    skill_bit = " · ".join(headline_skills) if headline_skills else "Python · SQL · agents"
+        plus = f" ({city} is a plus)" if city else ""
+        about_place = f"remote, hybrid, or on-site{plus}"
+    skill_bit = (
+        " · ".join(headline_skills)
+        or " · ".join(_display(skill, casing) for skill in profile.skills[:3])
+        or "see skills"
+    )
     headline = f"{titles} · {skill_bit} · {arrangement}"[:220]
 
     quantified = [
@@ -198,13 +302,13 @@ def generate_linkedin_pack(
     if not quantified_lines and resume.experience and resume.experience[0].bullets:
         quantified_lines = [f"• {resume.experience[0].bullets[0]}"]
     about_lines = [
-        profile.summary,
+        profile.summary or resume.basics.summary,
         "",
         "What that has looked like in practice:",
         *quantified_lines,
         "",
         (
-            f"Currently open to {', '.join(profile.target_titles[:3])} roles "
+            f"Currently open to {', '.join(profile.target_titles[:3]) or 'matching'} roles "
             f"{about_place}. Fastest contact: {profile.email}."
         ),
     ]
@@ -241,15 +345,15 @@ def generate_linkedin_pack(
         ),
     ]
 
+    grad = ""
+    if resume.education and resume.education[0].end:
+        grad = f" · Starting after {resume.education[0].end} graduation"
     pack = LinkedInPack(
         headline=headline,
         about=about,
         skills=skills,
         experience_rewrites=rewrites,
-        open_to_work=(
-            f"Open to {', '.join(profile.target_titles[:4])} · {open_to_place} "
-            f"· Starting after May 2026 graduation"
-        ),
+        open_to_work=f"Open to {', '.join(profile.target_titles[:4]) or 'roles'} · {open_to_place}{grad}",
         rationale=rationale,
         generated_by="heuristic",
     )

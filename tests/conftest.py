@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from app.linkedin import DEMO_SNAPSHOT
 from app.profile import DEFAULT_PROFILE, DEFAULT_RESUME
 
 
@@ -39,4 +40,5 @@ def tmp_db_ready(tmp_db):
     """Same isolated DB, with the Ethan demo candidate saved so a run can start."""
     tmp_db.save_profile(DEFAULT_PROFILE)
     tmp_db.save_resume(DEFAULT_RESUME)
+    tmp_db.save_snapshot(DEMO_SNAPSHOT)
     return tmp_db

@@ -20,6 +20,8 @@ A new database starts **empty**. The agent will not search until the profile has
 python3 -m app status           # tells you what is missing
 # Fill the Profile page in the viewer, or load the bundled example:
 python3 -m app load-demo        # Ethan Ignacio, AI Engineer / FDE
+python3 -m app load-resume path.txt   # optional: parse your resume text
+python3 -m app load-linkedin path.txt # optional: store a LinkedIn snapshot
 python3 -m app run
 ```
 
@@ -81,6 +83,12 @@ The allowlist is `profile.target_titles`, not a hardcoded AI Eng / FDE set. A po
 
 `is_plausible_target` lives in `app/sources/filter.py`.
 
+## Resume paste and LinkedIn snapshot
+
+The stored resume is what tailoring reorders. Paste text on the Profile page or `python -m app load-resume file.txt`. The parser extracts employers and bullets that appear in the paste; it will not invent a company if the paste omitted one.
+
+The LinkedIn pack diffs against a **snapshot you paste** (headline / About / skills / open-to-work), not against a live profile. A LinkedIn URL is stored only — never fetched. `python -m app load-linkedin file.txt` accepts a labeled dump. `load-demo` installs Ethan’s known public snapshot so the interview pack has specific diffs.
+
 ## What happens in one run
 
 ```
@@ -100,6 +108,7 @@ Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. Set `autopilot_ena
 - `tests/test_filter.py` — Ethan’s titles drop Data Scientist and Office Assistant; a Data Scientist profile keeps DS titles
 - `tests/test_location.py` — remote, Denver hybrid, and London on-site are kept; chicago-office mode still drops Remote (US) and NYC
 - `tests/test_tailor.py` — tailored resume still contains Wayfair, never invents employers
+- `tests/test_resume_parse.py` — Wayfair survives a paste; empty snapshot does not fall back to Ethan’s LinkedIn
 - `tests/test_linkedin.py` — headline drops “seeking internship” / Microsoft Office
 - `tests/test_cli.py` — `python -m app run --offline` is the product
 
@@ -124,7 +133,8 @@ app/scoring/score.py  heuristic scorer
 app/tailor.py         resume / cover letter
 app/apply.py          email vs ATS pack
 app/digest.py         daily markdown
-app/linkedin.py       copy-paste pack
+app/resume_parse.py   paste → structured resume
+app/linkedin.py       copy-paste pack + snapshot parse
 app/db.py             SQLite
 app/main.py           optional FastAPI viewer
 tests/

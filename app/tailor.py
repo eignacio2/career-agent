@@ -58,18 +58,21 @@ def matched_skills(resume: Resume, profile: Profile, job: Job) -> list[str]:
     return [skill for skill in extract_job_skills(job, owned) if skill.lower() in owned]
 
 
-def _heuristic_summary(job: Job, profile: Profile, overlap: list[str]) -> str:
+def _heuristic_summary(job: Job, profile: Profile, overlap: list[str], resume: Resume) -> str:
     focus = ", ".join(overlap[:5])
     if profile.experience_level == "new-grad":
-        base = (
-            f"New-grad CS candidate targeting the {job.title} role at {job.company}. "
-            "Track record is internships and an AI-agent externship, not years of full-time DS."
-        )
+        base = f"New-grad candidate targeting the {job.title} role at {job.company}."
     else:
         base = (
             f"{profile.years_experience}+ years of relevant work, targeting the "
             f"{job.title} role at {job.company}."
         )
+    if resume.experience:
+        role = resume.experience[0]
+        if role.company:
+            base += f" Most recent work: {role.role} at {role.company}."
+        elif role.role:
+            base += f" Most recent work: {role.role}."
     if focus:
         return f"{base} Overlap with this posting: {focus}."
     return base
@@ -102,7 +105,8 @@ def _cover_letter(
         ),
     ]
     if recent and best:
-        paragraphs.append(f"As {recent.role} at {recent.company}, I {_as_clause(best[0])}")
+        where = f" at {recent.company}" if recent.company else ""
+        paragraphs.append(f"As {recent.role}{where}, I {_as_clause(best[0])}")
     if len(best) > 1:
         extra = f"I {_as_clause(best[1])}"
         if len(best) > 2:
@@ -137,7 +141,7 @@ def tailor_application(job: Job, profile: Profile, resume: Resume) -> TailoredAp
     return TailoredApplication(
         resume_markdown=render_resume_markdown(
             resume,
-            summary=_heuristic_summary(job, profile, overlap),
+            summary=_heuristic_summary(job, profile, overlap, resume),
             bullets_by_experience_id=bullets,
             priority_skills=overlap,
             target_title=job.title,
