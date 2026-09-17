@@ -10,6 +10,14 @@ from app.linkedin import DEMO_SNAPSHOT
 from app.profile import DEFAULT_PROFILE, DEFAULT_RESUME
 
 
+@pytest.fixture(autouse=True)
+def _no_vendor_llm(monkeypatch):
+    """Tests must not hit a real /chat/completions endpoint."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+
+
 @pytest.fixture
 def profile():
     return DEFAULT_PROFILE.model_copy()

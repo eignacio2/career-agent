@@ -38,20 +38,20 @@
     <dd>httpx returns JSON as dicts (parse). Pydantic <code>SourceJob</code> / <code>Profile</code> reject malformed records (validate). Mixing those — treating a dict as a Job — is how silent None scores happen.</dd>
     <dt>Transactions as a unit of work</dt>
     <dd><code>record_score</code> is the unit: score + verdict + status + decided_at. If that commit fails, the job stays <code>new</code> and the next run will score it again.</dd>
+    <dt>Tailor overlay, not scorer overlay</dt>
+    <dd>Scoring stays heuristic so every number is testable. If <code>OPENAI_API_KEY</code> or a local <code>OPENAI_BASE_URL</code> is set, <code>app/tailor.py</code> asks a model to rewrite the already-selected bullets and letter. <code>app/facts.py</code> rejects invented employers, metrics, or skills and keeps the heuristic pack.</dd>
   </dl>
 </section>
 
 <section class="panel">
   <h2>Not in this slice — on purpose</h2>
   <ul>
-    <li>Resume tailoring and cover letters</li>
-    <li>Sending applications by email</li>
-    <li>PDF / LinkedIn import</li>
-    <li>Daily digest SMTP</li>
+    <li>Filling Greenhouse / Lever / Workday / Easy Apply forms</li>
+    <li>Fetching or writing a LinkedIn profile (snapshot paste only)</li>
     <li>LLM overlay on the heuristic score</li>
-    <li>Autopilot</li>
+    <li>PDF resume import</li>
   </ul>
-  <p>Each of those is a new failure mode (prompt injection from job descriptions, ToS on ATS forms, SMTP credentials). They come back after this core is something you can debug.</p>
+  <p>ATS form-fill and unofficial LinkedIn writes are ToS choices, not missing features. Scoring stays a tested cap table so a model cannot raise a 5+ years screen-out over 72.</p>
 </section>
 
 <section class="panel">

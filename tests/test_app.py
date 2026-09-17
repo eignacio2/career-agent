@@ -18,6 +18,7 @@ def test_settings_resume_paste_replaces_stored_resume(tmp_db_ready):
     assert page.status_code == 200
     assert b"Resume (paste" in page.content
     assert b"LinkedIn snapshot" in page.content
+    assert b"LLM overlay is off" in page.content
     response = client.post(
         "/settings",
         data={
@@ -60,3 +61,9 @@ def test_offline_run_via_http(tmp_db_ready):
     jobs = client.get("/jobs?status=queued")
     assert jobs.status_code == 200
     assert b"Associate AI Engineer" in jobs.content or b"Forward Deployed" in jobs.content
+    queued = tmp_db_ready.list_jobs(status=["queued"], limit=1)
+    assert queued
+    detail = client.get(f"/jobs/{queued[0].id}")
+    assert detail.status_code == 200
+    assert b"Application pack" in detail.content
+    assert b"overlay skipped" in detail.content.lower() or b"heuristic" in detail.content.lower() or b"LLM overlay" in detail.content

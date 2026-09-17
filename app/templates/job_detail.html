@@ -44,6 +44,22 @@
   </article>
 </section>
 
+{% if application %}
+<section class="panel">
+  <h2>Application pack</h2>
+  <p class="muted">{{ application.status }} · {{ application.channel }} · .data/applications/{{ application.id }}/</p>
+  {% if application.tailoring_notes %}
+  <ul>
+    {% for note in application.tailoring_notes %}
+    <li>{{ note }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <h3>Cover letter</h3>
+  <pre class="description">{{ application.cover_letter }}</pre>
+</section>
+{% endif %}
+
 <section class="panel">
   <h2>Posting</h2>
   {% if job.salary_text %}<p class="muted">{{ job.salary_text }}</p>{% endif %}

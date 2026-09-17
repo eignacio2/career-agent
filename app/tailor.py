@@ -1,14 +1,18 @@
-"""Reorder an existing resume for one posting.
+"""Reorder, then optionally rewrite, an existing resume for one posting.
 
 Hard rule: never invent employers, titles, dates, metrics, or skills.
-This is the version you can defend in an interview — every bullet on the
-tailored resume already existed on the source resume.
+The heuristic reorders bullets. An LLM overlay may rephrase them. A facts
+gate rejects the overlay if it invents anything; the heuristic pack is kept.
 """
 
 from __future__ import annotations
 
 import re
+from typing import Any, Callable
 
+from app import config
+from app.facts import check_overlay
+from app.llm import request_overlay
 from app.models import Job, Profile, Resume, TailoredApplication
 from app.resume_render import render_resume_markdown
 from app.scoring.score import extract_job_skills
@@ -135,17 +139,80 @@ def default_notes(overlap: list[str], bullets: dict[str, list[str]]) -> list[str
     ]
 
 
-def tailor_application(job: Job, profile: Profile, resume: Resume) -> TailoredApplication:
-    overlap = matched_skills(resume, profile, job)
-    bullets = select_bullets(resume, job)
+def _render(
+    job: Job,
+    profile: Profile,
+    resume: Resume,
+    overlap: list[str],
+    bullets: dict[str, list[str]],
+    summary: str,
+    cover_letter: str,
+    notes: list[str],
+    generated_by: str,
+) -> TailoredApplication:
     return TailoredApplication(
         resume_markdown=render_resume_markdown(
             resume,
-            summary=_heuristic_summary(job, profile, overlap, resume),
+            summary=summary,
             bullets_by_experience_id=bullets,
             priority_skills=overlap,
             target_title=job.title,
         ),
-        cover_letter=_cover_letter(job, profile, resume, bullets, overlap),
-        notes=default_notes(overlap, bullets),
+        cover_letter=cover_letter,
+        notes=notes,
+        generated_by=generated_by,
+    )
+
+
+def tailor_application(
+    job: Job,
+    profile: Profile,
+    resume: Resume,
+    complete: Callable[[str, str], dict[str, Any] | None] | None = None,
+) -> TailoredApplication:
+    overlap = matched_skills(resume, profile, job)
+    bullets = select_bullets(resume, job)
+    summary = _heuristic_summary(job, profile, overlap, resume)
+    cover = _cover_letter(job, profile, resume, bullets, overlap)
+    notes = default_notes(overlap, bullets)
+    heuristic = _render(job, profile, resume, overlap, bullets, summary, cover, notes, "heuristic")
+
+    should_overlay = complete is not None or config.llm_configured()
+    if not should_overlay:
+        notes.append("LLM overlay skipped (no OPENAI_API_KEY / local OPENAI_BASE_URL).")
+        return heuristic.model_copy(update={"notes": notes})
+
+    draft = request_overlay(job, profile, resume, bullets, overlap, complete=complete)
+    if draft is None:
+        notes.append("LLM overlay skipped (no JSON response); used the heuristic pack.")
+        return heuristic.model_copy(update={"notes": notes})
+
+    ok, reason = check_overlay(
+        resume=resume,
+        profile=profile,
+        job=job,
+        original_bullets=bullets,
+        draft=draft,
+    )
+    if not ok:
+        notes.append(f"LLM overlay rejected: {reason}. Used the heuristic pack.")
+        return heuristic.model_copy(update={"notes": notes})
+
+    merged_bullets = dict(bullets)
+    merged_bullets.update(draft.bullets_by_experience_id)
+    overlay_summary = draft.summary.strip() or summary
+    overlay_notes = notes + [
+        "LLM overlay rewrote the summary, bullets, and cover letter.",
+        "Facts gate passed: no new employers, metrics, or skills.",
+    ]
+    return _render(
+        job,
+        profile,
+        resume,
+        overlap,
+        merged_bullets,
+        overlay_summary,
+        draft.cover_letter.strip(),
+        overlay_notes,
+        "llm",
     )

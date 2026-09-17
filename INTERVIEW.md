@@ -40,7 +40,9 @@ A −20 penalty on an 88 still clears threshold 72. A **cap of 45** cannot. Year
 
 ## 5. Tailoring (2 min) — `app/tailor.py`
 
-Reorders existing bullets by overlap with the posting. Hard rule: never invent employers, dates, or metrics. The source resume is whatever was pasted (or `load-demo`). Show `tests/test_tailor.py` and `tests/test_resume_parse.py`.
+Always reorders existing bullets by overlap with the posting. If a key or local base URL is configured, `app/llm.py` may rewrite those bullets and the letter. `app/facts.py` rejects invented employers, metrics, or skills and keeps the heuristic pack. The source resume is whatever was pasted (or `load-demo`). Show `tests/test_tailor.py` (hostile Blue Harbor / 40% overlay) and `tests/test_resume_parse.py`.
+
+Scoring is still heuristic. The model is not in `score_job`.
 
 ## 6. What you did not automate (1 min)
 
@@ -49,5 +51,5 @@ Greenhouse/Lever/Workday/Easy Apply are not filled in. LinkedIn is a copy-paste 
 ## Likely follow-ups
 
 - **Why SQLite?** One candidate, one machine, no ops. WAL + a transaction for score+status.
-- **Why no LLM?** Every number in scoring is deterministic and tested. An LLM overlay that cannot override `Excluded` or raise a cap is a later addition, not the core.
+- **Why is scoring still heuristic?** Every number in scoring is deterministic and tested. Caps have to stay caps. The LLM is a tailor overlay only; a failed facts check discards the rewrite. An overlay that cannot override `Excluded` or raise a cap is still not on the scorer.
 - **Work authorization / location?** Default filter keeps remote, hybrid, and on-site in any city. Scoring boosts Chicago / target cities and gives remote full location points. Foreign on-site is capped at 50, not dropped. `location_mode=chicago-office` restores the old Chicago-only hard filter.

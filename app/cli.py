@@ -16,7 +16,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from app import db
+from app import config, db
 from app.apply import submit_by_email
 from app.linkedin import parse_linkedin_snapshot
 from app.models import TailoredApplication
@@ -153,6 +153,11 @@ def cmd_status(_args: argparse.Namespace) -> int:
     else:
         print("LinkedIn snapshot: (none pasted)")
     print(f"Jobs: {counts}")
+    _key, base, model = config.llm_settings()
+    if config.llm_configured():
+        print(f"LLM overlay: on ({model} @ {base})")
+    else:
+        print("LLM overlay: off — heuristic reorder only (set OPENAI_API_KEY or OPENAI_BASE_URL)")
     if run:
         print(f"Last run #{run.id} {run.status} at {run.started_at}  stats={run.stats.model_dump()}")
     return 0

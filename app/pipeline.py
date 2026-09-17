@@ -112,12 +112,14 @@ def _run(
     try:
         profile = db.get_profile()
         resume = db.get_resume()
+        overlay = "on" if config.llm_configured() else "off"
         log.add(
             "start",
             (
-                f"Run triggered by {trigger}. Heuristic scoring and tailoring "
-                f"(no LLM). Level: {profile.experience_level}, years ceiling: "
-                f"{profile.max_years_required}, autopilot: {profile.autopilot_enabled}."
+                f"Run triggered by {trigger}. Heuristic scoring (no LLM). "
+                f"Resume overlay {overlay}. Level: {profile.experience_level}, "
+                f"years ceiling: {profile.max_years_required}, "
+                f"autopilot: {profile.autopilot_enabled}."
             ),
         )
 

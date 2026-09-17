@@ -81,6 +81,7 @@
   <fieldset>
     <legend>Resume (paste, not a PDF)</legend>
     <p class="muted full">Paste the text of your resume. The agent extracts employers and bullets that appear in the paste; it will not invent a company. Leave this box empty to keep the stored resume. No PDF upload in this step — PDFs mangle two-column layouts.</p>
+    <p class="muted full">{% if llm_configured %}LLM overlay is on ({{ llm_model }}): after reorder, a model may rewrite summary, bullets, and the letter. A facts gate drops the rewrite if it invents employers, metrics, or skills.{% else %}LLM overlay is off. Packs reorder existing bullets only. Set <code>OPENAI_API_KEY</code> (or <code>OPENAI_BASE_URL</code> for a local server) to enable the rewrite. Scoring stays heuristic either way.{% endif %}</p>
     {% if resume.experience or resume.basics.name %}
     <div class="full">
       <p class="muted">Stored resume</p>

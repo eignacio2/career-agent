@@ -1,4 +1,4 @@
-"""Turn a Resume into markdown. Tailoring only reorders; it never invents rows."""
+"""Turn a Resume into markdown. Tailoring never invents rows."""
 
 from __future__ import annotations
 

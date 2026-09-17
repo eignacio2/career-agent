@@ -177,6 +177,15 @@ class TailoredApplication(BaseModel):
     resume_markdown: str
     cover_letter: str
     notes: list[str] = Field(default_factory=list)
+    generated_by: str = "heuristic"
+
+
+class OverlayDraft(BaseModel):
+    """LLM rewrite of a pack. Facts-gated before it replaces the heuristic."""
+
+    summary: str = ""
+    cover_letter: str = ""
+    bullets_by_experience_id: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class Application(BaseModel):

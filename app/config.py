@@ -24,3 +24,23 @@ PORT = int(os.environ.get("PORT", "43421"))
 
 USER_AGENT = "career-agent/2.0 (personal job-search assistant)"
 DEFAULT_LIMIT_PER_SOURCE = 25
+
+def llm_settings() -> tuple[str, str, str]:
+    """key, base_url, model — read on each call so a new env var is picked up."""
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    base = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+    return key, base, model
+
+
+def llm_configured() -> bool:
+    """True when a rewrite overlay can be attempted.
+
+    A vendor key is enough. A non-OpenAI base URL is enough for a local
+    server (Ollama) that does not need a key. Default OpenAI with no key
+    is not configured — the heuristic tailor still runs.
+    """
+    key, base, _ = llm_settings()
+    if key:
+        return True
+    return bool(base) and base != "https://api.openai.com/v1"

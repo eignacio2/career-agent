@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app import db
+from app import config, db
 from app.config import CRON_SECRET
 from app.linkedin import parse_linkedin_snapshot
 from app.models import LinkedInSnapshot, Profile
@@ -49,6 +49,8 @@ def _ctx(**extra):
         "latest_run": db.latest_run(),
         "setup_missing": missing,
         "setup_ready": not missing,
+        "llm_configured": config.llm_configured(),
+        "llm_model": config.llm_settings()[2],
         **extra,
     }
 
@@ -79,7 +81,12 @@ def job_detail(request: Request, job_id: int):
     job = db.get_job(job_id)
     if job is None:
         raise HTTPException(404, "Job not found")
-    return _page(request, "job_detail.html", job=job)
+    return _page(
+        request,
+        "job_detail.html",
+        job=job,
+        application=db.get_application_for_job(job_id),
+    )
 
 
 @app.get("/settings", response_class=HTMLResponse)

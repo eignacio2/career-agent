@@ -23,8 +23,9 @@ Living notes for the Python rewrite. The in-app page `/concepts` is the short ve
 | Test pyramid | Years + caps are pure unit tests. CLI test hits SQLite with the sample board. |
 | Parse vs validate | `httpx` returns dicts. `SourceJob` / `Profile` are Pydantic models. Do not score a raw dict. |
 | Unit of work | `db.record_score` and `db.upsert_application` wrap status writes in one transaction. |
-| Tailor ≠ invent | `app/tailor.py` only reorders existing bullets. |
+| Tailor ≠ invent | Heuristic reorder in `app/tailor.py`. Optional LLM rewrite in `app/llm.py`. Facts gate in `app/facts.py` discards invented employers, metrics, and skills. |
 | Email vs ATS | Address → `send_mail`. Form URL → pack on disk. No Greenhouse bots. |
+| Score stays heuristic | `score_job` does not call a model. Overlay cannot raise a cap. |
 
 ## Ahead (do not pretend these are done)
 
@@ -32,6 +33,6 @@ Living notes for the Python rewrite. The in-app page `/concepts` is the short ve
 - Cross-process run lock (today: threading lock + `runs.status = running`)
 - Real migrations
 - Optional LLM overlay that **cannot** override `Excluded` or raise a capped score
-- Prompt injection: job descriptions are untrusted text
+- Prompt injection: job descriptions are untrusted text (the facts gate is the current defense on the tailor path)
 
-Digest, tailoring, and LinkedIn packs are implemented as heuristics + local files. SMTP is optional.
+Digest and LinkedIn packs are heuristics + local files. Tailoring is heuristic reorder plus an optional model rewrite. SMTP is optional.

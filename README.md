@@ -2,14 +2,14 @@
 
 Python job-search agent. The bundled demo candidate is a **new-grad AI Engineer / Forward Deployed Engineer**; the title filter follows whatever target titles are on the profile.
 
-It discovers postings, keeps titles that match those targets, keeps **remote, hybrid, and on-site roles in any city**, scores them with year-requirement **caps** (not penalties), tailors a resume and cover letter from bullets you already have, emails an application when the posting lists an address, and otherwise prepares a pack for you to submit on Greenhouse/Lever/Workday. It writes a daily digest and a LinkedIn copy-paste pack. **It does not fill ATS forms.**
+It discovers postings, keeps titles that match those targets, keeps **remote, hybrid, and on-site roles in any city**, scores them with year-requirement **caps** (not penalties), tailors a resume and cover letter from bullets you already have (heuristic reorder, then an optional LLM rewrite behind a facts gate), emails an application when the posting lists an address, and otherwise prepares a pack for you to submit on Greenhouse/Lever/Workday. It writes a daily digest and a LinkedIn copy-paste pack. **It does not fill ATS forms.**
 
 The demo profile does not list Data Scientist, so those titles are classified and dropped. Put Data Scientist on the profile and they are kept. Generic Software Engineer matches by phrase only, so it does not pull in every analyst programme.
 
 ## Resume bullets you can actually defend
 
 - Built a Python agent that discovers postings from public boards plus company career APIs, title-filters against the candidate’s target roles, keeps remote/hybrid/on-site roles (Chicago is a scoring boost, not a hard drop), and scores fit with a cap so a 5+ years role cannot clear a 72 apply threshold.
-- Tailors a markdown resume and cover letter by reordering existing bullets (never invents employers or metrics); emails applications when a posting lists an address, otherwise queues an ATS pack for manual submit.
+- LLM-driven resume and cover-letter tailoring: reorders existing bullets, optionally rewrites them with an OpenAI-compatible model, then a facts gate rejects invented employers, metrics, or skills and keeps the heuristic pack.
 - Writes a daily digest and a field-by-field LinkedIn update pack (headline/About/skills). LinkedIn is copy-paste; there is no unofficial write API.
 
 ## First-time setup
@@ -85,9 +85,25 @@ The allowlist is `profile.target_titles`, not a hardcoded AI Eng / FDE set. A po
 
 ## Resume paste and LinkedIn snapshot
 
-The stored resume is what tailoring reorders. Paste text on the Profile page or `python -m app load-resume file.txt`. The parser extracts employers and bullets that appear in the paste; it will not invent a company if the paste omitted one.
+The stored resume is what tailoring starts from. Paste text on the Profile page or `python -m app load-resume file.txt`. The parser extracts employers and bullets that appear in the paste; it will not invent a company if the paste omitted one.
 
 The LinkedIn pack diffs against a **snapshot you paste** (headline / About / skills / open-to-work), not against a live profile. A LinkedIn URL is stored only — never fetched. `python -m app load-linkedin file.txt` accepts a labeled dump. `load-demo` installs Ethan’s known public snapshot so the interview pack has specific diffs.
+
+## LLM overlay (rewrite only)
+
+Scoring does **not** call a model. Tailoring always reorders first. If `OPENAI_API_KEY` is set, or `OPENAI_BASE_URL` points at a local OpenAI-compatible server (Ollama), `app/llm.py` asks the model to rewrite the already-selected bullets, summary, and cover letter. `app/facts.py` then checks the draft: extra experience ids, extra bullets, invented numbers, invented skills from the vocabulary, and `at`/`from`/`with` + a capitalized org that is not on the resume or the posting. Fail → heuristic pack + a rejection note. Pass → `generated_by=llm`.
+
+```bash
+export OPENAI_API_KEY=sk-...          # vendor
+# or
+export OPENAI_BASE_URL=http://127.0.0.1:11434/v1
+export OPENAI_MODEL=llama3.1
+python3 -m app status                 # prints overlay on/off
+```
+
+No key and the default OpenAI base URL → overlay skipped. Demo the agent without a key; live rewrite needs a key or a local server.
+
+Email when a posting lists an address, otherwise queue an ATS pack for manual submit.
 
 ## What happens in one run
 
@@ -107,7 +123,8 @@ Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. Set `autopilot_ena
 - `tests/test_score.py` — new-grad AI Engineer / FDE clears 72; 5+ years senior is capped below it
 - `tests/test_filter.py` — Ethan’s titles drop Data Scientist and Office Assistant; a Data Scientist profile keeps DS titles
 - `tests/test_location.py` — remote, Denver hybrid, and London on-site are kept; chicago-office mode still drops Remote (US) and NYC
-- `tests/test_tailor.py` — tailored resume still contains Wayfair, never invents employers
+- `tests/test_tailor.py` — Wayfair stays; invented Blue Harbor / 40% overlay is rejected; a factual rewrite is kept
+- `tests/test_llm.py` — overlay is off without a key; JSON drafts parse from fenced replies
 - `tests/test_resume_parse.py` — Wayfair survives a paste; empty snapshot does not fall back to Ethan’s LinkedIn
 - `tests/test_linkedin.py` — headline drops “seeking internship” / Microsoft Office
 - `tests/test_cli.py` — `python -m app run --offline` is the product
@@ -117,8 +134,9 @@ Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. Set `autopilot_ena
 1. `app/pipeline.py` — one run
 2. `app/sources/filter.py` — title allowlist
 3. `app/scoring/score.py` — weights and caps
-4. `app/tailor.py` — reorder, do not invent
-5. `tests/test_score.py` — proof
+4. `app/tailor.py` — reorder, optional rewrite, facts gate
+5. `tests/test_score.py` — proof scoring is still heuristic
+6. `tests/test_tailor.py` — proof the overlay cannot invent employers
 
 See `INTERVIEW.md` for the 15-minute script.
 
@@ -130,7 +148,9 @@ app/cli.py            python -m app
 app/sources/          boards + title filter
 app/geo.py            location allow / deny
 app/scoring/score.py  heuristic scorer
-app/tailor.py         resume / cover letter
+app/tailor.py         resume / cover letter (heuristic + overlay)
+app/llm.py            OpenAI-compatible /chat/completions
+app/facts.py          reject invented employers / metrics / skills
 app/apply.py          email vs ATS pack
 app/digest.py         daily markdown
 app/resume_parse.py   paste → structured resume
