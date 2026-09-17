@@ -105,7 +105,7 @@ def _run(
     log = RunLog()
     stats = RunStats()
     notes: list[str] = []
-    skipped: list[tuple[Job, str]] = []
+    shortlisted: list[Job] = []
     submitted: list = []
     awaiting: list = []
 
@@ -236,9 +236,9 @@ def _run(
             )
             scored.append(updated)
             if status == "skipped":
-                reason = match.gaps[0] if match.gaps else f"scored {match.score}, below {threshold}"
-                skipped.append((updated, reason))
                 stats.skipped += 1
+            elif status == "shortlisted":
+                shortlisted.append(updated)
 
         stats.scored = len(scored)
         stats.top_score = max((job.score or 0 for job in scored), default=0)
@@ -338,7 +338,7 @@ def _run(
                 stats=stats,
                 submitted=submitted,
                 awaiting=awaiting,
-                skipped=skipped,
+                shortlisted=shortlisted,
                 notes=notes,
             )
             digest_path = write_digest_file(text)

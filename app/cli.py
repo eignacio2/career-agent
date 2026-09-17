@@ -153,6 +153,8 @@ def cmd_status(_args: argparse.Namespace) -> int:
     else:
         print("LinkedIn snapshot: (none pasted)")
     print(f"Jobs: {counts}")
+    digest_to = (profile.digest_email or profile.email).strip() or "(none)"
+    print(f"Run report email: {digest_to}")
     _key, base, model = config.llm_settings()
     if config.llm_configured():
         print(f"LLM overlay: on ({model} @ {base})")

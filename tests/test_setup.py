@@ -18,3 +18,4 @@ def test_cli_load_demo_then_status(tmp_db, capsys):
     assert "Ethan Ignacio" in status
     assert "Setup incomplete" not in status
     assert "LLM overlay: off" in status
+    assert "Run report email:" in status

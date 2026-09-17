@@ -24,7 +24,7 @@ Say: these came from the New Grad Positions board, remote aggregators, and compa
 
 ## 2. Pipeline (3 min) — `app/pipeline.py`
 
-Discover every board independently (one timeout does not abort the others). Fallback to sample board. Title filter from `profile.target_titles` (`app/sources/filter.py`). Location filter: remote / hybrid / on-site, any city (`app/geo.py`); chicago-office is opt-in. Insert if new (`UNIQUE source, source_id`). Score. Tailor only the queued ones. Email only when the posting lists an address **and** autopilot is on. Digest is markdown; SMTP is optional.
+Discover every board independently (one timeout does not abort the others). Fallback to sample board. Title filter from `profile.target_titles` (`app/sources/filter.py`). Location filter: remote / hybrid / on-site, any city (`app/geo.py`); chicago-office is opt-in. Insert if new (`UNIQUE source, source_id`). Score. Tailor only the queued ones. Email only when the posting lists an address **and** autopilot is on. Digest is a run report to the address on the profile (queued + close matches, not skipped jobs); SMTP is optional.
 
 ## 3. Why the filter is title-only (2 min) — `app/sources/filter.py`
 

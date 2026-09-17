@@ -21,6 +21,8 @@
     <legend>Identity</legend>
     <label>Full name <input name="full_name" value="{{ profile.full_name }}" required></label>
     <label>Email <input name="email" type="email" value="{{ profile.email }}" required></label>
+    <label class="full">Run report email <input name="digest_email" type="email" value="{{ profile.digest_email }}" placeholder="defaults to the email above"></label>
+    <p class="muted full">After each run, queued and close-match postings are mailed here (not the poor matches). Set <code>SMTP_HOST</code> / <code>SMTP_USER</code> / <code>SMTP_PASS</code> to hit a real inbox; otherwise the same report lands in <code>.data/outbox/</code>.</p>
     <label>Phone <input name="phone" value="{{ profile.phone }}"></label>
     <label>Location <input name="location" value="{{ profile.location }}"></label>
     <label>Headline <input name="headline" value="{{ profile.headline }}"></label>

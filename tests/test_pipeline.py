@@ -70,6 +70,11 @@ def test_offline_run_queues_new_grad_and_caps_senior(tmp_db_ready):
     digest = tmp_db_ready.latest_digest()
     assert digest is not None
     assert digest.path
+    assert "Associate AI Engineer" in digest.text or "Forward Deployed" in digest.text
+    assert "Office Assistant" not in digest.text
+    assert "Staff Machine Learning Engineer" not in digest.text
+    assert "Harborview AI" not in digest.text
+    assert "Thames Analytics" not in digest.text
 
     # Sample board itself still contains the assistant; the filter is the gate.
     sample_titles = {job.title for job in SampleSource().fetch([], 25)}

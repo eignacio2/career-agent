@@ -19,11 +19,13 @@ def test_settings_resume_paste_replaces_stored_resume(tmp_db_ready):
     assert b"Resume (paste" in page.content
     assert b"LinkedIn snapshot" in page.content
     assert b"LLM overlay is off" in page.content
+    assert b"Run report email" in page.content
     response = client.post(
         "/settings",
         data={
             "full_name": "Alex Example",
             "email": "alex@example.com",
+            "digest_email": "reports@example.com",
             "target_titles": "Data Scientist",
             "skills": "python",
             "experience_level": "new-grad",
@@ -49,6 +51,7 @@ def test_settings_resume_paste_replaces_stored_resume(tmp_db_ready):
     assert snap.headline.startswith("Data Analyst")
     profile = tmp_db_ready.get_profile()
     assert profile.full_name == "Alex Example"
+    assert profile.digest_email == "reports@example.com"
 
 
 def test_offline_run_via_http(tmp_db_ready):

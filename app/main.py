@@ -107,6 +107,7 @@ def _csv(value: str) -> list[str]:
 def save_settings(
     full_name: Annotated[str, Form()],
     email: Annotated[str, Form()],
+    digest_email: Annotated[str, Form()] = "",
     phone: Annotated[str, Form()] = "",
     location: Annotated[str, Form()] = "",
     headline: Annotated[str, Form()] = "",
@@ -150,6 +151,7 @@ def save_settings(
         update={
             "full_name": full_name.strip(),
             "email": email.strip(),
+            "digest_email": digest_email.strip(),
             "phone": phone.strip(),
             "location": location.strip(),
             "headline": headline.strip(),

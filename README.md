@@ -113,9 +113,9 @@ discover → title filter → location filter → SQLite dedupe → score (caps)
        → LinkedIn pack → digest.md (+ SMTP if configured)
 ```
 
-Autopilot is **off** by default. Packs land in `.data/applications/<id>/`. Mail without SMTP lands in `.data/outbox/`. Digests land in `.data/digests/`.
+Autopilot is **off** by default. Packs land in `.data/applications/<id>/`. After each run, queued and close-match jobs are mailed to the **run report email** on the Profile page (poor matches are counted, not listed). Without `SMTP_HOST` that report lands in `.data/outbox/`. Digests also land in `.data/digests/`.
 
-Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. Set `autopilot_enabled` on the profile only if you want email applications sent unattended.
+Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. The agent does not fill ATS forms.
 
 ## Tests that matter in an interview
 
