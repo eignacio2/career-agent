@@ -10,6 +10,28 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_env_file(path: Path) -> None:
+    """Fill os.environ from a KEY=VALUE file without overwriting the process env."""
+    if not path.is_file():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        if line.startswith("export "):
+            line = line[7:].strip()
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_env_file(ROOT / ".env")
+_load_env_file(ROOT / ".env.local")
+
 DATA_DIR = Path(os.environ.get("CAREER_AGENT_DATA", ROOT / ".data"))
 DB_PATH = Path(os.environ.get("CAREER_AGENT_DB", DATA_DIR / "career-agent.db"))
 

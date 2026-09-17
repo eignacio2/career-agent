@@ -18,6 +18,15 @@ def _no_vendor_llm(monkeypatch):
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
 
 
+@pytest.fixture(autouse=True)
+def _no_smtp(monkeypatch):
+    """Tests must not send real mail if a local .env has SMTP set."""
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+    monkeypatch.delenv("SMTP_USER", raising=False)
+    monkeypatch.delenv("SMTP_PASS", raising=False)
+    monkeypatch.delenv("MAIL_FROM", raising=False)
+
+
 @pytest.fixture
 def profile():
     return DEFAULT_PROFILE.model_copy()
