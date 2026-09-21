@@ -24,6 +24,10 @@ outbox/
 *.tsbuildinfo
 next-env.d.ts
 
+# Local interview notes (kept on disk, not published)
+INTERVIEW.md
+CONCEPTS.md
+
 # misc
 .DS_Store
 coverage/
