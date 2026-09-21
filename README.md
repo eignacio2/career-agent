@@ -138,8 +138,6 @@ Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. The agent does not
 5. `tests/test_score.py` — proof scoring is still heuristic
 6. `tests/test_tailor.py` — proof the overlay cannot invent employers
 
-See `INTERVIEW.md` for the 15-minute script.
-
 ## Layout
 
 ```
