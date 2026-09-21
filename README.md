@@ -6,11 +6,6 @@ It discovers postings, keeps titles that match those targets, keeps **remote, hy
 
 The demo profile does not list Data Scientist, so those titles are classified and dropped. Put Data Scientist on the profile and they are kept. Generic Software Engineer matches by phrase only, so it does not pull in every analyst programme.
 
-## Resume bullets you can actually defend
-
-- Built a Python agent that discovers postings from public boards plus company career APIs, title-filters against the candidate’s target roles, keeps remote/hybrid/on-site roles (Chicago is a scoring boost, not a hard drop), and scores fit with a cap so a 5+ years role cannot clear a 72 apply threshold.
-- LLM-driven resume and cover-letter tailoring: reorders existing bullets, optionally rewrites them with an OpenAI-compatible model, then a facts gate rejects invented employers, metrics, or skills and keeps the heuristic pack.
-- Writes a daily digest and a field-by-field LinkedIn update pack (headline/About/skills). LinkedIn is copy-paste; there is no unofficial write API.
 
 ## First-time setup
 
@@ -117,7 +112,7 @@ Autopilot is **off** by default. Packs land in `.data/applications/<id>/`. After
 
 Set `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` to actually send. The agent does not fill ATS forms.
 
-## Tests that matter in an interview
+
 
 - `tests/test_extract_years.py` — `4+ years` counts; “past 5 years” does not
 - `tests/test_score.py` — new-grad AI Engineer / FDE clears 72; 5+ years senior is capped below it
